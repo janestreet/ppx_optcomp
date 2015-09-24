@@ -1,0 +1,21 @@
+OASISFormat:      0.3
+OCamlVersion:     >= 4.02.3
+FindlibVersion:   >= 1.3.2
+Name:             ppx_optcomp
+Version:          113.09.00
+Synopsis:         Optional compilation for OCaml
+Authors:          Jane Street Group, LLC <opensource@janestreet.com>
+Copyrights:       (C) 2015 Jane Street Group LLC <opensource@janestreet.com>
+Maintainers:      Jane Street Group, LLC <opensource@janestreet.com>
+License:          Apache-2.0
+LicenseFile:      LICENSE.txt
+Homepage:         https://github.com/janestreet/ppx_optcomp
+Plugins:          StdFiles (0.3), DevFiles (0.3), META (0.3)
+XStdFilesAUTHORS: false
+XStdFilesREADME:  false
+BuildTools:       ocamlbuild
+
+Library ppx_optcomp
+  Path:               src
+  Modules:            Ppx_optcomp
+  BuildDepends:       compiler-libs.common, ppx_core
