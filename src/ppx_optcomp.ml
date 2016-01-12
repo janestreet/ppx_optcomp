@@ -117,6 +117,17 @@ module Directive = struct
 end
 
 (* +-----------------------------------------------------------------+
+   | Import resolution                                               |
+   +-----------------------------------------------------------------+ *)
+
+let resolve_import ~current_filename ~filename =
+  let dir = Filename.dirname current_filename in
+  if Filename.is_relative filename && dir <> "." then
+    Filename.concat dir filename
+  else
+    filename
+
+(* +-----------------------------------------------------------------+
    | Expression evaluation                                           |
    +-----------------------------------------------------------------+ *)
 
@@ -161,9 +172,9 @@ let not_supported e =
 let rec eval env e : Value.t =
   let loc = e.pexp_loc in
   match e.pexp_desc with
-  | Pexp_constant (Const_int     x       ) -> Int    x
-  | Pexp_constant (Const_char    x       ) -> Char   x
-  | Pexp_constant (Const_string (x, None)) -> String x
+  | Pexp_constant (Const_int     x    ) -> Int    x
+  | Pexp_constant (Const_char    x    ) -> Char   x
+  | Pexp_constant (Const_string (x, _)) -> String x
 
   | Pexp_construct ({ txt = Lident "true" ; _ }, None) -> Bool true
   | Pexp_construct ({ txt = Lident "false"; _ }, None) -> Bool false
@@ -275,9 +286,9 @@ and bind env patt value =
   match patt.ppat_desc, value with
   | Ppat_any, _ -> env
 
-  | Ppat_constant (Const_int     x       ), Int    y when x = y -> env
-  | Ppat_constant (Const_char    x       ), Char   y when x = y -> env
-  | Ppat_constant (Const_string (x, None)), String y when x = y -> env
+  | Ppat_constant (Const_int     x    ), Int    y when x = y -> env
+  | Ppat_constant (Const_char    x    ), Char   y when x = y -> env
+  | Ppat_constant (Const_string (x, _)), String y when x = y -> env
 
   | Ppat_construct ({ txt = Lident "true" ; _ }, None), Bool true  -> env
   | Ppat_construct ({ txt = Lident "false"; _ }, None), Bool false -> env
@@ -506,7 +517,7 @@ end = struct
       | LIDENT "import" -> begin
           let e = get_expr () in
           match e.pexp_desc with
-          | Pexp_constant (Const_string (s, None)) -> Import s
+          | Pexp_constant (Const_string (s, _)) -> Import s
           | _ ->
             Location.raise_errorf ~loc:e.pexp_loc "optcomp: #import expect a string"
         end
@@ -661,6 +672,11 @@ end = struct
       env := do_bind !env patt (eval !env expr)
 
     | Import fname ->
+      let fname =
+        resolve_import
+          ~current_filename:dir.loc.loc_start.pos_fname
+          ~filename:fname
+      in
       import ~loc:dir.loc lexer fname
 
     | Error e ->

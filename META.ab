@@ -1,0 +1,15 @@
+version = "$(pkg_version)"
+description = "Optional compilation for OCaml"
+requires = "ppx_core"
+archive(byte          ) = "ppx_optcomp.cma"
+archive(native        ) = "ppx_optcomp.cmxa"
+archive(native, plugin) = "ppx_optcomp.cmxs"
+exists_if = "ppx_optcomp.cma"
+
+package "for_ppx_deriving" (
+  description = "Don't use this directly"
+  error(ppx_driver) = "Cannot use ppx_optcomp.for_ppx_deriving when ppx_driver is set"
+  requires = "ppx_core.for_ppx_deriving ppx_deriving"
+  exists_if = "ppx_optcomp.cma"
+  ppxopt = "ppx_deriving,./ppx_optcomp.cma"
+)
