@@ -1,7 +1,6 @@
 (** Optional compilation with cpp-like directives *)
 
 open StdLabels
-open Ppx_core.Std
 open Parsetree
 
 module Value : sig

@@ -6,4 +6,8 @@ let sections =
     ],
     [ ("META", None)
     ])
+  ; ("bin",
+    [ ("built_exec_ppx-optcomp", Some "ppx-optcomp")
+    ],
+    [])
   ]

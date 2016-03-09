@@ -32,7 +32,7 @@ correct.
 
 ppx\_optcomp will interpret all lines that start with a `#`. `#` has
 to be the first character, if there are spaces before ppx\_optcomp
-will not try to interpret the line and will pass it as-it to the OCaml
+will not try to interpret the line and will pass it as-is to the OCaml
 parser. The syntax is:
 
 ```
@@ -41,8 +41,8 @@ parser. The syntax is:
 
 The argument is everything up to the end of the line. You can use `\`
 at the end of lines to span the argument over multiple line. Optcomp
-will also automatically fetch the argument pass the end of line if a
-set of parentheses is not properly closed.
+will also automatically fetch arguments past the end of line if a set 
+of parentheses is not properly closed.
 
 So for instance one can write:
 
@@ -93,7 +93,7 @@ The following directives are available for conditional compilations:
 - `#else`
 - `#endif`
 
-In all cases _expression_ must be an expression that evaluate to a
+In all cases _expression_ must be an expression that evaluates to a
 boolean value. Ppx\_optcomp will fail if it is not the case.
 
 For people used to cpp, we also allow these:
@@ -104,7 +104,7 @@ For people used to cpp, we also allow these:
 - `#elifndef` _identifier_
 
 Which will test if a variable is defined. It is however not advised to
-use this form because if the user misspell the variable name, there
+use this form because if the user misspells the variable name, there
 will be no error or warning.
 
 ### Warnings and errors
@@ -115,7 +115,7 @@ message on stderr.
 `#error` _expression_ will cause the pre-processor to fail with the
 following error message.
 
-Note that in both case _expression_ can be an arbitrary expression.
+Note that in both cases _expression_ can be an arbitrary expression.
 
 ### Imports
 
@@ -123,7 +123,12 @@ Ppx\_optcomp allows one to import another file using:
 
 `#import` _filename_
 
-where _filename_ is a string constant.
+where _filename_ is a string constant. Filenames to import are
+resolved as follow:
+
+- if _filename_ is relative, i.e. doesn't start with `/`, it is
+  considered as relative to the directory of the file being parsed
+- if _filename_ is absolute, i.e. starts with `/`, it is used as it
 
 To keep things simple ppx\_optcomp only allows for `#`-directives in
 imported files. The intended use is having this at the beginning of a

@@ -1,3 +1,7 @@
+## 113.33.00
+
+- Install standalone ppx-optcomp program that can be run through `-pp`
+
 ## 113.24.00
 
 - Change the way optcomp resolve filenames in #import directives
