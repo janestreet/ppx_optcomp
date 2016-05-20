@@ -1,3 +1,12 @@
+## 113.43.00
+
+- Make it easier to share a .h and .mlh
+
+  Ppx_optcomp was modified to accept `defined(X)` only if `X` has been
+  seen, either in a `#define` or `#undef`. This allow to share config.h
+  files between C and OCaml and still be protected against typos in .ml
+  files.
+
 ## 113.33.00
 
 - Install standalone ppx-optcomp program that can be run through `-pp`
