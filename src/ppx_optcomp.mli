@@ -1,6 +1,5 @@
 (** Optional compilation with cpp-like directives *)
 
-open StdLabels
 open Parsetree
 
 module Value : sig
@@ -22,11 +21,13 @@ module Value : sig
 end
 
 module Env : sig
-  type t = Value.t Map.Make(String).t
-
-  include Map.S with type key = string and type 'a t := 'a Map.Make(String).t
+  type t
 
   val init : t
+
+  val add : t -> var:string Location.loc -> value:Value.t -> t
+
+  val of_list : (string Location.loc * Value.t) list -> t
 end
 
 val eval : Env.t -> expression -> Value.t

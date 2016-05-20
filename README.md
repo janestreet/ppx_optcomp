@@ -84,6 +84,8 @@ Directives
 We also allow: `#define` _identifier_. This will define _identifier_
 to `()`.
 
+You can also undefine a variable using `#undef` _identifier_.
+
 ### Conditionals
 
 The following directives are available for conditional compilations:
@@ -103,9 +105,17 @@ For people used to cpp, we also allow these:
 - `#elifdef` _identifier_
 - `#elifndef` _identifier_
 
-Which will test if a variable is defined. It is however not advised to
-use this form because if the user misspells the variable name, there
-will be no error or warning.
+Which will test if a variable is defined. Note that ppx\_optcomp will
+only accept to test if a variable is defined if it has seen it before,
+in one of `#let`, `#define` or `#undef`. This allows ppx\_opcompt to
+check for typos.
+
+We do however allow this special case:
+
+```ocaml
+#ifndef VAR
+#define VAR
+```
 
 ### Warnings and errors
 

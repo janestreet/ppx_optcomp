@@ -95,19 +95,90 @@ module Value = struct
   ;;
 end
 
-module Env = struct
-  include (Map.Make(String)
-           : Map.S with type key = string and type 'a t := 'a Map.Make(String).t)
+module Env : sig
+  type t
 
-  type t = Value.t Map.Make(String).t
+  val init : t
 
-  let init = singleton "ocaml_version" Value.ocaml_version
+  val add : t -> var:string Location.loc -> value:Value.t -> t
+  val undefine : t -> string Location.loc -> t
+
+  val of_list : (string Location.loc * Value.t) list -> t
+
+  val eval : t -> string Location.loc -> Value.t
+  val is_defined : t -> string Location.loc -> bool
+
+  val seen : t -> string Location.loc -> bool
+end = struct
+  type var_state =
+    | Defined of Value.t
+    | Undefined
+
+  type entry =
+    { loc   : Location.t (** Location at which it was defined/undefined *)
+    ; state : var_state
+    }
+
+  module M = Map.Make(String)
+
+  type t = entry M.t
+
+  let seen t (var : _ Location.loc) = M.mem var.txt t
+
+  let add t ~(var:_ Location.loc) ~value =
+    M.add var.txt { loc = var.loc; state = Defined value } t
+  ;;
+
+  let undefine t (var : _ Location.loc) =
+    M.add var.txt { loc = var.loc; state = Undefined } t
+  ;;
+
+  let of_list l = List.fold_left l ~init:M.empty ~f:(fun acc (var, value) ->
+    add acc ~var ~value)
+  ;;
+
+  let init =
+    of_list
+      [ { loc = Location.none
+        ; txt = "ocaml_version"
+        },
+        Value.ocaml_version
+      ]
+
+  let short_loc_string (loc : Location.t) =
+    Printf.sprintf "%s:%d" loc.loc_start.pos_fname loc.loc_start.pos_lnum
+  ;;
+
+  let eval (t : t) (var:string Location.loc) =
+    match M.find var.txt t with
+    | { state = Defined v; loc = _  } -> v
+    | { state = Undefined; loc      } ->
+      Location.raise_errorf ~loc:var.loc "optcomp: %s is undefined (undefined at %s)"
+        var.txt (short_loc_string loc)
+    | exception Not_found ->
+      Location.raise_errorf ~loc:var.loc "optcomp: unbound value %s" var.txt
+  ;;
+
+  let is_defined (t : t) (var:string Location.loc) =
+    match M.find var.txt t with
+    | { state = Defined _; _ } -> true
+    | { state = Undefined; _ } -> false
+    | exception Not_found ->
+      Location.raise_errorf ~loc:var.loc
+        "optcomp: doesn't know about %s.\n\
+         You need to either define it or undefine it with #undef.\n\
+         Optcomp doesn't accept variables it doesn't know about to avoid typos."
+        var.txt
+  ;;
 end
 
 module Directive = struct
   type t =
     | Let     of pattern * expression
+    | Define  of string Location.loc * expression
+    | Undef   of string Location.loc
     | If      of expression
+    | Ifndef  of string Location.loc
     | Else
     | Elif    of expression
     | Endif
@@ -182,13 +253,8 @@ let rec eval env e : Value.t =
 
   | Pexp_tuple l -> Tuple (List.map l ~f:(eval env))
 
-  | Pexp_ident id | Pexp_construct (id, None) -> begin
-      let name = var_of_lid id in
-      match Env.find name.txt env with
-      | v -> v
-      | exception Not_found ->
-        Location.raise_errorf ~loc "optcomp: unbound value %s" name.txt
-    end
+  | Pexp_ident id | Pexp_construct (id, None) ->
+      Env.eval env (var_of_lid id)
 
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident s; _ }; _ }, args) -> begin
       let args =
@@ -244,7 +310,7 @@ let rec eval env e : Value.t =
              end
            | Bool _ | Tuple _ as x -> cannot_convert loc "char" x)
       | "show", [x] -> String (Value.to_string_pretty (eval env x))
-      | "defined", [x] -> Bool (Env.mem (var_of_expr x).txt env)
+      | "defined", [x] -> Bool (Env.is_defined env (var_of_expr x))
       | _ -> not_supported e
     end
 
@@ -294,11 +360,11 @@ and bind env patt value =
   | Ppat_construct ({ txt = Lident "false"; _ }, None), Bool false -> env
   | Ppat_construct ({ txt = Lident "()"   ; _ }, None), Tuple []   -> env
 
-  | Ppat_var { txt; _ }, _       -> Env.add txt value env
-  | Ppat_construct (id, None), _ -> Env.add (var_of_lid id).txt value env
+  | Ppat_var var, _              -> Env.add env ~var ~value
+  | Ppat_construct (id, None), _ -> Env.add env ~var:(var_of_lid id) ~value
 
-  | Ppat_alias (patt, { txt; _ }), _ ->
-    Env.add txt value (bind env patt value)
+  | Ppat_alias (patt, var), _ ->
+    Env.add (bind env patt value) ~var ~value
 
   | Ppat_tuple x, Tuple y when List.length x = List.length y ->
     List.fold_left2 x y ~init:env ~f:bind
@@ -495,24 +561,23 @@ end = struct
       | LIDENT "error"   -> Error (get_expr ())
       | LIDENT "warning" -> Warning (get_expr ())
 
-      | LIDENT "ifdef"    -> If   (get_def ())
-      | LIDENT "elifdef"  -> Elif (get_def ())
-      | LIDENT "ifndef"   -> If   (get_def () |> enot)
-      | LIDENT "elifndef" -> Elif (get_def () |> enot)
+      | LIDENT "ifdef"    -> If    (get_def ())
+      | LIDENT "elifdef"  -> Elif  (get_def ())
+      | LIDENT "ifndef"   -> Ifndef(get_expr () |> var_of_expr)
+      | LIDENT "elifndef" -> Elif  (get_def () |> enot)
 
       | LIDENT "define" -> begin
           let e = get_expr () in
           match e.pexp_desc with
           | Pexp_construct (x, Some y) ->
-            let id = var_of_lid x in
-            Let (ppat_var ~loc:id.loc id, y)
+            Define (var_of_lid x, y)
           | Pexp_apply (x, [("", y)]) ->
-            let id = var_of_expr x in
-            Let (ppat_var ~loc:id.loc id, y)
+            Define (var_of_expr x, y)
           | _ ->
-            let id = var_of_expr e in
-            Let (ppat_var ~loc:id.loc id, eunit ~loc:id.loc)
+            Define (var_of_expr e, eunit ~loc:e.pexp_loc)
         end
+
+      | LIDENT "undef" -> Undef (var_of_expr (get_expr ()))
 
       | LIDENT "import" -> begin
           let e = get_expr () in
@@ -652,16 +717,31 @@ end = struct
 
   and interpret_directive lexer lexbuf (dir : Directive.t Located.t) =
     match dir.txt with
-    | If e ->
-      if eval_bool !env e then
-        Stack.enqueue dir
+    | If e -> interpret_if lexer lexbuf dir e
+
+    | Ifndef var ->
+      let e =
+        let loc = var.loc in
+        eapply ~loc (evar ~loc "not")
+          [eapply ~loc (evar ~loc "defined") [evar ~loc var.txt]]
+      in
+      let dir = { dir with txt = Directive.If e } in
+      if Env.seen !env var then
+        interpret_if lexer lexbuf dir e
       else begin
-        let dir = next_endif lexer lexbuf in
-        match dir.txt with
-        | Else   -> Stack.enqueue dir
-        | Elif e -> interpret_directive lexer lexbuf { dir with txt = If e }
-        | Endif  -> ()
-        | _      -> assert false
+        (* Special case for ifndef + define. If we fallback to [interpret_if], it will
+           raise, because the variable is not defined. *)
+        match lexer lexbuf with
+        | SHARP when at_bol lexbuf -> begin
+            match (parse_directive lexer lexbuf).txt with
+            | Define (var', expr) when var'.txt = var.txt ->
+              Stack.enqueue dir;
+              env := do_bind !env (ppat_var ~loc:var.loc var) (eval !env expr)
+            | _ ->
+              interpret_if lexer lexbuf dir e
+          end
+        | _ ->
+          interpret_if lexer lexbuf dir e
       end
 
     | Else   -> Stack.dequeue dir; skip_else lexer lexbuf
@@ -670,6 +750,12 @@ end = struct
 
     | Let (patt, expr) ->
       env := do_bind !env patt (eval !env expr)
+
+    | Define (var, expr) ->
+      env := do_bind !env (ppat_var ~loc:var.loc var) (eval !env expr)
+
+    | Undef var ->
+      env := Env.undefine !env var
 
     | Import fname ->
       let fname =
@@ -688,6 +774,18 @@ end = struct
       Location.print ppf dir.loc;
       Format.fprintf ppf "Warning %s@." msg;
       Format.pp_print_flush ppf ()
+
+  and interpret_if lexer lexbuf dir e =
+    if eval_bool !env e then
+      Stack.enqueue dir
+    else begin
+      let dir = next_endif lexer lexbuf in
+      match dir.txt with
+      | Else   -> Stack.enqueue dir
+      | Elif e -> interpret_directive lexer lexbuf { dir with txt = If e }
+      | Endif  -> ()
+      | _      -> assert false
+    end
 
   and import ~loc lexer fname =
     let ic =
