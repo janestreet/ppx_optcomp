@@ -1,5 +1,5 @@
 OASISFormat:           0.4
-OCamlVersion:          >= 4.02.3
+OCamlVersion:          >= 4.04.0
 FindlibVersion:        >= 1.3.2
 Name:                  ppx_optcomp
 Version:               114.01+04
