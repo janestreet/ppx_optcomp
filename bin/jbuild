@@ -1,0 +1,6 @@
+(executables
+ ((names (optcomp))
+  (link_flags (-linkall))
+  (public_release ((build_and_install ((optcomp ppx-optcomp)))))
+  (preprocess ((no_preprocessing All)))
+  (libraries (ocamlcommon ppx_optcomp))))
