@@ -3,4 +3,30 @@
 # This prevents the implicit addition of -ppx options by ocamlfind
 <**/*.ml{,i}>: predicate(ppx_driver)
 # OASIS_START
+# DO NOT EDIT (digest: 42f4fcf9772aa3491d222088a1ab6c98)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library ppx_optcomp
+"src/ppx_optcomp.cmxs": use_ppx_optcomp
+<src/*.ml{,i,y}>: package(ppx_core)
+<src/*.ml{,i,y}>: package(ppx_tools.metaquot)
+# Executable ppx-optcomp
+<bin/optcomp.{native,byte}>: package(ppx_core)
+<bin/optcomp.{native,byte}>: package(ppx_tools.metaquot)
+<bin/optcomp.{native,byte}>: use_ppx_optcomp
+<bin/*.ml{,i,y}>: package(ppx_core)
+<bin/*.ml{,i,y}>: package(ppx_tools.metaquot)
+<bin/*.ml{,i,y}>: use_ppx_optcomp
 # OASIS_STOP

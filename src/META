@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: c1365f4a114f5cb36239dab81885c60c)
+version = "113.33.00+4.03"
+description = "Optional compilation for OCaml"
+requires = "ppx_core ppx_tools.metaquot"
+archive(byte) = "ppx_optcomp.cma"
+archive(byte, plugin) = "ppx_optcomp.cma"
+archive(native) = "ppx_optcomp.cmxa"
+archive(native, plugin) = "ppx_optcomp.cmxs"
+exists_if = "ppx_optcomp.cma"
+# OASIS_STOP
+

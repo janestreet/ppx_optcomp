@@ -1,0 +1,15 @@
+bin: [
+  "_build/bin/optcomp.native" {"ppx-optcomp"}
+]
+lib: [
+  "_build/src/ppx_optcomp.cmx" {"ppx_optcomp.cmx"}
+  "_build/src/ppx_optcomp.annot" {"ppx_optcomp.annot"}
+  "_build/src/ppx_optcomp.cmt" {"ppx_optcomp.cmt"}
+  "_build/src/ppx_optcomp.cmti" {"ppx_optcomp.cmti"}
+  "_build/src/ppx_optcomp.cmi" {"ppx_optcomp.cmi"}
+  "_build/src/ppx_optcomp.cmxs" {"ppx_optcomp.cmxs"}
+  "_build/src/ppx_optcomp.a" {"ppx_optcomp.a"}
+  "_build/src/ppx_optcomp.cmxa" {"ppx_optcomp.cmxa"}
+  "_build/src/ppx_optcomp.cma" {"ppx_optcomp.cma"}
+  "META"
+]
