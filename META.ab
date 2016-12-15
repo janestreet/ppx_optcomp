@@ -1,8 +1,0 @@
-version = "$(pkg_version)"
-description = "Optional compilation for OCaml"
-requires = "compiler-libs.common ppx_core"
-archive(byte  ) = "ppx_optcomp.cma"
-archive(native) = "ppx_optcomp.cmxa"
-plugin(byte  ) = "ppx_optcomp.cma"
-plugin(native) = "ppx_optcomp.cmxs"
-exists_if = "ppx_optcomp.cma"

@@ -787,7 +787,10 @@ end = struct
     if eval_bool !env e then
       Stack.enqueue dir
     else begin
+      let current_handle_docstrings = !Lexer.handle_docstrings in
+      Lexer.handle_docstrings:=false;
       let dir = next_endif lexer lexbuf in
+      Lexer.handle_docstrings:= current_handle_docstrings;
       match dir.txt with
       | Else   -> Stack.enqueue dir
       | Elif e -> interpret_directive lexer lexbuf { dir with txt = If e }
