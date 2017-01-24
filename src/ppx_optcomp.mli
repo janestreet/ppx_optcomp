@@ -1,6 +1,6 @@
 (** Optional compilation with cpp-like directives *)
 
-open Parsetree
+open Ppx_core
 
 module Value : sig
   (** Representation of values supported by optcomp. *)
@@ -25,9 +25,9 @@ module Env : sig
 
   val init : t
 
-  val add : t -> var:string Location.loc -> value:Value.t -> t
+  val add : t -> var:string Loc.t -> value:Value.t -> t
 
-  val of_list : (string Location.loc * Value.t) list -> t
+  val of_list : (string Loc.t * Value.t) list -> t
 end
 
 val eval : Env.t -> expression -> Value.t
@@ -40,5 +40,5 @@ module Make(Params : sig
   end) : sig
   val init : unit -> unit
   val map_lexer : (Lexing.lexbuf -> Parser.token) -> Lexing.lexbuf -> Parser.token
-  val preprocess_file : string -> out_channel -> unit
+  val preprocess_file : string -> Out_channel.t -> unit
 end

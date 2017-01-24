@@ -2,6 +2,6 @@
  ((name ppx_optcomp)
   (public_name ppx_optcomp)
   (libraries (compiler-libs.common ppx_core))
-  (preprocess metaquot)
+  (preprocess no_preprocessing)
   (js_of_ocaml ())
   ))

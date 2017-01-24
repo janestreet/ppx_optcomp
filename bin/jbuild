@@ -2,7 +2,7 @@
  ((names (optcomp))
   (link_flags (-linkall))
   (preprocess no_preprocessing)
-  (libraries (compiler-libs.common ppx_optcomp))))
+  (libraries (compiler-libs.common ppx_core ppx_optcomp))))
 
 (install
  ((section bin)

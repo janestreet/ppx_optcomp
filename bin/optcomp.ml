@@ -1,3 +1,5 @@
+open Ppx_core
+
 module M = Ppx_optcomp.Make(struct
     let lexer = Lexer.token
     let env = Ppx_optcomp.Env.init
@@ -5,12 +7,12 @@ module M = Ppx_optcomp.Make(struct
 
 let () =
   let usage =
-    Printf.sprintf "%s [extra_args] [<files>]" Sys.executable_name
+    Printf.sprintf "%s [extra_args] [<files>]" Caml.Sys.executable_name
   in
   Lexer.set_preprocessor ignore (fun lexer -> lexer);
   try
-    Arg.parse [] (fun fn -> M.preprocess_file fn stdout) usage
+    Caml.Arg.parse [] (fun fn -> M.preprocess_file fn stdout) usage
   with exn ->
-    Location.report_exception Format.err_formatter exn;
-    exit 1
+    Location.report_exception Caml.Format.err_formatter exn;
+    Caml.exit 1
 ;;

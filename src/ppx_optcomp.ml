@@ -1,7 +1,8 @@
-open StdLabels
-open Ppx_core.Std
+open Ppx_core
 open Ast_builder.Default
-open Parsetree
+
+module Filename = Caml.Filename
+module Parsing  = Caml.Parsing
 
 module Type = struct
   type t =
@@ -31,7 +32,7 @@ module Value = struct
     | Tuple  of t list
 
   let ocaml_version =
-    Scanf.sscanf Sys.ocaml_version "%d.%d.%d"
+    Caml.Scanf.sscanf Caml.Sys.ocaml_version "%d.%d.%d"
       (fun major minor patchlevel -> Tuple [Int major; Int minor; Int patchlevel])
   ;;
 
@@ -65,9 +66,9 @@ module Value = struct
     let buf = Buffer.create 128 in
     let rec aux = function
       | Bool b ->
-        Buffer.add_string buf (string_of_bool b)
+        Buffer.add_string buf (Bool.to_string b)
       | Int n ->
-        Buffer.add_string buf (string_of_int n)
+        Buffer.add_string buf (Int.to_string n)
       | Char ch ->
         Buffer.add_char buf ch
       | String s ->
@@ -119,21 +120,19 @@ end = struct
     ; state : var_state
     }
 
-  module M = Map.Make(String)
+  type t = entry Map.M(String).t
 
-  type t = entry M.t
+  let seen t (var : _ Loc.t) = Map.mem t var.txt
 
-  let seen t (var : _ Location.loc) = M.mem var.txt t
-
-  let add t ~(var:_ Location.loc) ~value =
-    M.add var.txt { loc = var.loc; state = Defined value } t
+  let add t ~(var:_ Loc.t) ~value =
+    Map.add t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
   ;;
 
-  let undefine t (var : _ Location.loc) =
-    M.add var.txt { loc = var.loc; state = Undefined } t
+  let undefine t (var : _ Loc.t) =
+    Map.add t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
   ;;
 
-  let of_list l = List.fold_left l ~init:M.empty ~f:(fun acc (var, value) ->
+  let of_list l = List.fold_left l ~init:(Map.empty (module String)) ~f:(fun acc (var, value) ->
     add acc ~var ~value)
   ;;
 
@@ -149,21 +148,21 @@ end = struct
     Printf.sprintf "%s:%d" loc.loc_start.pos_fname loc.loc_start.pos_lnum
   ;;
 
-  let eval (t : t) (var:string Location.loc) =
-    match M.find var.txt t with
-    | { state = Defined v; loc = _  } -> v
-    | { state = Undefined; loc      } ->
+  let eval (t : t) (var:string Loc.t) =
+    match Map.find t var.txt with
+    | Some { state = Defined v; loc = _  } -> v
+    | Some { state = Undefined; loc      } ->
       Location.raise_errorf ~loc:var.loc "optcomp: %s is undefined (undefined at %s)"
         var.txt (short_loc_string loc)
-    | exception Not_found ->
+    | None ->
       Location.raise_errorf ~loc:var.loc "optcomp: unbound value %s" var.txt
   ;;
 
-  let is_defined (t : t) (var:string Location.loc) =
-    match M.find var.txt t with
-    | { state = Defined _; _ } -> true
-    | { state = Undefined; _ } -> false
-    | exception Not_found ->
+  let is_defined (t : t) (var:string Loc.t) =
+    match Map.find t var.txt with
+    | Some { state = Defined _; _ } -> true
+    | Some { state = Undefined; _ } -> false
+    | None ->
       Location.raise_errorf ~loc:var.loc
         "optcomp: doesn't know about %s.\n\
          You need to either define it or undefine it with #undef.\n\
@@ -175,10 +174,10 @@ end
 module Directive = struct
   type t =
     | Let     of pattern * expression
-    | Define  of string Location.loc * expression
-    | Undef   of string Location.loc
+    | Define  of string Loc.t * expression
+    | Undef   of string Loc.t
     | If      of expression
-    | Ifndef  of string Location.loc
+    | Ifndef  of string Loc.t
     | Else
     | Elif    of expression
     | Endif
@@ -193,7 +192,7 @@ end
 
 let resolve_import ~current_filename ~filename =
   let dir = Filename.dirname current_filename in
-  if Filename.is_relative filename && dir <> "." then
+  if Filename.is_relative filename && String.(<>) dir "." then
     Filename.concat dir filename
   else
     filename
@@ -209,7 +208,7 @@ let invalid_type loc expected real =
 ;;
 
 let var_of_lid (id : _ Located.t) =
-  match Longident.flatten id.txt with
+  match Longident.flatten_exn id.txt with
   | l -> { id with txt = String.concat ~sep:"." l }
   | exception _ ->
     Location.raise_errorf ~loc:id.loc "optcomp: invalid variable name"
@@ -241,7 +240,7 @@ let not_supported e =
 ;;
 
 let parse_int loc x =
-  match int_of_string x with
+  match Int.of_string x with
   | v -> v
   | exception _ ->
     Location.raise_errorf ~loc "optcomp: invalid integer"
@@ -265,22 +264,22 @@ let rec eval env e : Value.t =
 
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident s; _ }; _ }, args) -> begin
       let args =
-        List.map args ~f:(fun (l, x) -> if l <> Asttypes.Nolabel then not_supported e else x)
+        List.map args ~f:(fun (l, x) -> match l with Nolabel -> x | _ -> not_supported e)
       in
       match s, args with
-      | "="  , [x; y] -> eval_cmp     env ( = )   x y
-      | "<"  , [x; y] -> eval_cmp     env ( < )   x y
-      | ">"  , [x; y] -> eval_cmp     env ( > )   x y
-      | "<=" , [x; y] -> eval_cmp     env ( <= )  x y
-      | ">=" , [x; y] -> eval_cmp     env ( >= )  x y
-      | "<>" , [x; y] -> eval_cmp     env ( <> )  x y
-      | "min", [x; y] -> eval_poly2   env min     x y
-      | "max", [x; y] -> eval_poly2   env max     x y
+      | "="  , [x; y] -> eval_cmp     env Polymorphic_compare.( = )   x y
+      | "<"  , [x; y] -> eval_cmp     env Polymorphic_compare.( < )   x y
+      | ">"  , [x; y] -> eval_cmp     env Polymorphic_compare.( > )   x y
+      | "<=" , [x; y] -> eval_cmp     env Polymorphic_compare.( <= )  x y
+      | ">=" , [x; y] -> eval_cmp     env Polymorphic_compare.( >= )  x y
+      | "<>" , [x; y] -> eval_cmp     env Polymorphic_compare.( <> )  x y
+      | "min", [x; y] -> eval_poly2   env Polymorphic_compare.min     x y
+      | "max", [x; y] -> eval_poly2   env Polymorphic_compare.max     x y
       | "+"  , [x; y] -> eval_int2    env ( + )   x y
       | "-"  , [x; y] -> eval_int2    env ( - )   x y
       | "*"  , [x; y] -> eval_int2    env ( * )   x y
       | "/"  , [x; y] -> eval_int2    env ( / )   x y
-      | "mod", [x; y] -> eval_int2    env ( mod ) x y
+      | "mod", [x; y] -> eval_int2    env Caml.( mod ) x y
       | "not", [x]    -> Bool (not (eval_bool env x))
       | "||" , [x; y] -> eval_bool2   env ( || ) x y
       | "&&" , [x; y] -> eval_bool2   env ( && ) x y
@@ -292,14 +291,14 @@ let rec eval env e : Value.t =
       | "to_int", [x] ->
         Int
           (match eval env x with
-           | String x -> convert_from_string loc "int" int_of_string x
+           | String x -> convert_from_string loc "int" Int.of_string x
            | Int    x -> x
-           | Char   x -> int_of_char x
+           | Char   x -> Char.to_int x
            | Bool _ | Tuple _ as x -> cannot_convert loc "int" x)
       | "to_bool", [x] ->
         Bool
           (match eval env x with
-           | String x -> convert_from_string loc "bool" bool_of_string x
+           | String x -> convert_from_string loc "bool" Bool.of_string x
            | Bool   x -> x
            | Int _ | Char _ | Tuple _ as x -> cannot_convert loc "bool" x)
       | "to_char", [x] ->
@@ -310,10 +309,13 @@ let rec eval env e : Value.t =
                (fun s -> assert (String.length s = 1); s.[0]) x
            | Char x -> x
            | Int x ->
-             begin try
-               Char.chr x
-             with _ ->
-               Location.raise_errorf ~loc "optcomp: cannot convert %d to char" x
+             begin
+               match
+                 Char.of_int x
+               with
+               | Some x -> x
+               | None ->
+                 Location.raise_errorf ~loc "optcomp: cannot convert %d to char" x
              end
            | Bool _ | Tuple _ as x -> cannot_convert loc "char" x)
       | "show", [x] -> String (Value.to_string_pretty (eval env x))
@@ -361,8 +363,8 @@ and bind env patt value =
   | Ppat_any, _ -> env
 
   | Ppat_constant (Pconst_integer    (x, None)), Int    y when parse_int loc x = y -> env
-  | Ppat_constant (Pconst_char    x       ), Char   y when               x = y -> env
-  | Ppat_constant (Pconst_string (x, _   )), String y when               x = y -> env
+  | Ppat_constant (Pconst_char    x       ), Char   y when Char.equal   x y -> env
+  | Ppat_constant (Pconst_string (x, _   )), String y when String.equal x y -> env
 
   | Ppat_construct ({ txt = Lident "true" ; _ }, None), Bool true  -> env
   | Ppat_construct ({ txt = Lident "false"; _ }, None), Bool false -> env
@@ -375,7 +377,7 @@ and bind env patt value =
     Env.add (bind env patt value) ~var ~value
 
   | Ppat_tuple x, Tuple y when List.length x = List.length y ->
-    List.fold_left2 x y ~init:env ~f:bind
+    Caml.ListLabels.fold_left2 x y ~init:env ~f:bind
 
   | _ ->
     raise (Pattern_match_failure (patt, value))
@@ -390,7 +392,7 @@ and do_bind env patt value =
 and eval_same env ex ey =
   let vx = eval env ex and vy = eval env ey in
   let tx = Value.type_ vx and ty = Value.type_ vy in
-  if tx = ty then
+  if Polymorphic_compare.equal tx ty then
     (vx, vy)
   else
     invalid_type ey.pexp_loc tx ty
@@ -443,7 +445,7 @@ type lexer = Lexing.lexbuf -> Parser.token
 module Make(Params : sig val env : Env.t end) : sig
   val init : unit -> unit
   val map_lexer : lexer -> lexer
-  val preprocess_file : string -> out_channel -> unit
+  val preprocess_file : string -> Out_channel.t -> unit
 end = struct
   (* +---------------------------------------------------------------+
      | Parsing of directives                                         |
@@ -452,7 +454,7 @@ end = struct
   let located x lexbuf =
     { Location.
       txt = x
-    ; loc = Location.curr lexbuf
+    ; loc = Location.of_lexbuf lexbuf
     }
   ;;
 
@@ -460,7 +462,7 @@ end = struct
     try
       parsing_fun lexer lexbuf
     with Parsing.Parse_error | Syntaxerr.Escape_error ->
-      let loc = Location.curr lexbuf in
+      let loc = Location.of_lexbuf lexbuf in
       raise (Syntaxerr.Error(Syntaxerr.Other loc))
   ;;
 
@@ -487,7 +489,8 @@ end = struct
           | LBRACKETAT
           | LBRACKETATAT
           | LBRACKETATATAT), _ -> loop acc (RBRACKET :: brackets)
-        | _, closing :: brackets when token = closing -> loop acc brackets
+        | _, closing :: brackets when Polymorphic_compare.(=) token closing ->
+          loop acc brackets
         | _ -> loop acc brackets
     in
     let start_pos =
@@ -605,7 +608,7 @@ end = struct
      +---------------------------------------------------------------+ *)
 
   let endif_missing lexbuf =
-    Location.raise_errorf ~loc:(Location.curr lexbuf)
+    Location.raise_errorf ~loc:(Location.of_lexbuf lexbuf)
       "optcomp: #endif missing"
   ;;
 
@@ -643,9 +646,9 @@ end = struct
     match (next_directive lexer lexbuf).txt with
     | If _ -> skip_if lexer lexbuf; skip_else lexer lexbuf
     | Else ->
-      Location.raise_errorf ~loc:(Location.curr lexbuf) "optcomp: #else or without #if"
+      Location.raise_errorf ~loc:(Location.of_lexbuf lexbuf) "optcomp: #else or without #if"
     | Elif _ ->
-      Location.raise_errorf ~loc:(Location.curr lexbuf) "optcomp: #elif or without #if"
+      Location.raise_errorf ~loc:(Location.of_lexbuf lexbuf) "optcomp: #elif or without #if"
     | Endif -> ()
     | _ -> skip_else lexer lexbuf
 
@@ -681,11 +684,11 @@ end = struct
     let save () = let state = !stack in stack := []; state
     let restore state = stack := state
 
-    let is_empty () = !stack = []
+    let is_empty () = List.is_empty !stack
 
     let check_eof lexbuf =
       if not (is_empty ()) then
-        Location.raise_errorf ~loc:(Location.curr lexbuf) "optcomp: #endif missing"
+        Location.raise_errorf ~loc:(Location.of_lexbuf lexbuf) "optcomp: #endif missing"
     ;;
 
     let reset () = stack := []
@@ -698,15 +701,15 @@ end = struct
     pos.pos_cnum = pos.pos_bol
   ;;
 
-  exception Error_in_import of Lexing.position list * Location.error
+  exception Error_in_import of Lexing.position list * Location.Error.t
 
   let map_exn = function
     | Error_in_import (stack, error) ->
       let locs = List.rev_map stack ~f:(fun (pos : Lexing.position) ->
         Printf.sprintf "imported from file \"%s\", line %i" pos.pos_fname pos.pos_lnum)
       in
-      let msg = String.concat ~sep:"\n" (error.msg :: locs) in
-      raise (Location.Error { error with msg })
+      let msg = String.concat ~sep:"\n" (Location.Error.message error :: locs) in
+      raise (Location.Error (Location.Error.set_message error msg))
     | exn -> raise exn
 
   (* Return the next token from a stream, interpreting directives. *)
@@ -742,7 +745,7 @@ end = struct
         match lexer lexbuf with
         | SHARP when at_bol lexbuf -> begin
             match (parse_directive lexer lexbuf).txt with
-            | Define (var', expr) when var'.txt = var.txt ->
+            | Define (var', expr) when String.equal var'.txt var.txt ->
               Stack.enqueue dir;
               env := do_bind !env (ppat_var ~loc:var.loc var) (eval !env expr)
             | _ ->
@@ -778,10 +781,8 @@ end = struct
 
     | Warning e ->
       let msg = eval_string !env e in
-      let ppf = Format.err_formatter in
-      Location.print ppf dir.loc;
-      Format.fprintf ppf "Warning %s@." msg;
-      Format.pp_print_flush ppf ()
+      let ppf = Caml.Format.err_formatter in
+      Caml.Format.fprintf ppf "%a:@.Warning %s@." Location.print dir.loc msg
 
   and interpret_if lexer lexbuf dir e =
     if eval_bool !env e then
@@ -801,22 +802,27 @@ end = struct
   and import ~loc lexer fname =
     let ic =
       try
-        open_in fname
+        In_channel.create fname
       with exn ->
         let msg =
           match exn with
           | Sys_error msg -> msg
-          | _ -> Printexc.to_string exn
+          | _ -> Exn.to_string exn
         in
         Location.raise_errorf ~loc "optcomp: cannot open \"%s\": %s" fname msg
     in
     let lexbuf = Lexing.from_channel ic in
-    Location.init lexbuf fname;
+    lexbuf.lex_curr_p <-
+      { pos_fname = fname
+      ; pos_lnum  = 1
+      ; pos_bol   = 0
+      ; pos_cnum  = 0
+      };
     let stack_state = Stack.save () in
     match lexer_internal_skip_eols lexer lexbuf with
     | exception e -> begin
         Stack.restore stack_state;
-        close_in ic;
+        In_channel.close ic;
         match e with
         | Location.Error error ->
           raise (Error_in_import ([loc.loc_start], error))
@@ -826,12 +832,12 @@ end = struct
       end
     | token ->
       Stack.restore stack_state;
-      close_in ic;
+      In_channel.close ic;
       match token with
       | EOF -> ()
       | _ ->
         let error =
-          Location.errorf ~loc:(Location.curr lexbuf)
+          Location.Error.createf ~loc:(Location.of_lexbuf lexbuf)
             "optcomp: only directives are allowed in imported files"
         in
         raise (Error_in_import ([loc.loc_start], error))
@@ -845,9 +851,14 @@ end = struct
       map_exn exn
 
   let preprocess_file fn oc =
-    let ic = open_in fn in
+    let ic = In_channel.create fn in
     let lexbuf = Lexing.from_channel ic in
-    Location.init lexbuf fn;
+    lexbuf.lex_curr_p <-
+      { pos_fname = fn
+      ; pos_lnum  = 1
+      ; pos_bol   = 0
+      ; pos_cnum  = 0
+      };
     let rec loop pos acc =
       match Lexer.token lexbuf with
       | SHARP when at_bol lexbuf ->
@@ -868,11 +879,13 @@ end = struct
     List.iter chunks_to_copy ~f:(fun (start, stop) ->
       let len = stop - start in
       if len <> 0 then begin
-        seek_in ic start;
-        Buffer.add_channel buf ic len;
-        Buffer.output_buffer oc buf;
+        In_channel.seek ic (Int64.of_int start);
+        (match In_channel.input_buffer ic buf ~len with
+         | Some () -> ()
+         | None -> raise End_of_file);
+        Out_channel.output_buffer oc buf;
         Buffer.clear buf;
       end);
-    close_in ic;
+    In_channel.close ic;
   ;;
 end
