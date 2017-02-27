@@ -7,3 +7,5 @@
 (install
  ((section bin)
   (files ((optcomp.exe as ppx-optcomp)))))
+
+(jbuild_version jane_street)
