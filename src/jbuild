@@ -3,7 +3,6 @@
   (public_name ppx_optcomp)
   (libraries (compiler-libs.common ppx_core))
   (preprocess no_preprocessing)
-  (js_of_ocaml ())
   ))
 
 (jbuild_version jane_street)
