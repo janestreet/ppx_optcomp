@@ -1,5 +1,7 @@
-Optional compilation for OCaml
-==============================
+---
+title: ppx_optcomp - Optional compilation for OCaml
+parent: ../README.md
+---
 
 ppx\_optcomp stands for Optional Compilation. It is a tool used to
 handle optional compilations of pieces of code depending of the word
