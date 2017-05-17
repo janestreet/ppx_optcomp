@@ -12,7 +12,7 @@ depends: [
   "jbuilder" {build & >= "1.0+beta8"}
   "ppx_core"
 ]
-available: [ ocaml-version >= "4.03.0" ]
+available: [ ocaml-version >= "4.04.1" ]
 descr: "
 Optional compilation for OCaml
 

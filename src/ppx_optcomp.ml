@@ -620,7 +620,7 @@ end = struct
 
   let rec next_directive (lexer : lexer) lexbuf =
     match lexer lexbuf with
-    | SHARP -> parse_directive lexer lexbuf
+    | HASH -> parse_directive lexer lexbuf
     | EOL -> next_directive lexer lexbuf
     | EOF -> endif_missing lexbuf
     | _ -> skip_line lexer lexbuf; next_directive lexer lexbuf
@@ -715,7 +715,7 @@ end = struct
   (* Return the next token from a stream, interpreting directives. *)
   let rec lexer_internal (lexer : lexer) lexbuf : Parser.token =
     match lexer lexbuf with
-    | SHARP when at_bol lexbuf ->
+    | HASH when at_bol lexbuf ->
       interpret_directive lexer lexbuf (parse_directive lexer lexbuf);
       lexer_internal lexer lexbuf
     | EOF -> Stack.check_eof lexbuf; EOF
@@ -743,7 +743,7 @@ end = struct
         (* Special case for ifndef + define. If we fallback to [interpret_if], it will
            raise, because the variable is not defined. *)
         match lexer lexbuf with
-        | SHARP when at_bol lexbuf -> begin
+        | HASH when at_bol lexbuf -> begin
             match (parse_directive lexer lexbuf).txt with
             | Define (var', expr) when String.equal var'.txt var.txt ->
               Stack.enqueue dir;
@@ -861,7 +861,7 @@ end = struct
       };
     let rec loop pos acc =
       match Lexer.token lexbuf with
-      | SHARP when at_bol lexbuf ->
+      | HASH when at_bol lexbuf ->
         let acc = (pos, Lexing.lexeme_start lexbuf) :: acc in
         interpret_directive Lexer.token lexbuf (parse_directive Lexer.token lexbuf);
         loop (Lexing.lexeme_end lexbuf) acc
