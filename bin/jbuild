@@ -2,6 +2,7 @@
  ((names (optcomp))
   (link_flags (-linkall))
   (preprocess no_preprocessing)
+  (flags (:standard -safe-string))
   (libraries (compiler-libs.common ppx_core ppx_optcomp))))
 
 (install

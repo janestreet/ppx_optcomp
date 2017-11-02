@@ -1,6 +1,7 @@
 (library
  ((name ppx_optcomp)
   (public_name ppx_optcomp)
+  (flags (:standard -safe-string))
   (libraries (compiler-libs.common ppx_core))
   (preprocess no_preprocessing)
   ))
