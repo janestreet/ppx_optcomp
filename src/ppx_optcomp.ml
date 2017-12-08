@@ -125,11 +125,11 @@ end = struct
   let seen t (var : _ Loc.t) = Map.mem t var.txt
 
   let add t ~(var:_ Loc.t) ~value =
-    Map.add t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
+    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
   ;;
 
   let undefine t (var : _ Loc.t) =
-    Map.add t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
+    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
   ;;
 
   let of_list l = List.fold_left l ~init:(Map.empty (module String)) ~f:(fun acc (var, value) ->
