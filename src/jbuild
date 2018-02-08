@@ -2,7 +2,7 @@
  ((name ppx_optcomp)
   (public_name ppx_optcomp)
   (flags (:standard -safe-string))
-  (libraries (compiler-libs.common ppx_core))
+  (libraries (compiler-libs.common ppx_core ppx_driver))
   (preprocess no_preprocessing)
   ))
 

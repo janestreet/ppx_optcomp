@@ -1,3 +1,9 @@
+## git version
+
+- Completly changed the syntax to make this a proper ppx (and not a -pp as it
+  previously was).
+  The old syntax is now available in `ppx_optcomp_old`.
+
 ## 113.43.00
 
 - Make it easier to share a .h and .mlh
