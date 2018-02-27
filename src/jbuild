@@ -3,7 +3,9 @@
   (public_name ppx_optcomp)
   (flags (:standard -safe-string))
   (libraries (compiler-libs.common ppx_core ppx_driver))
+  (kind ppx_deriver)
   (preprocess no_preprocessing)
   ))
+
 
 (jbuild_version 1)
