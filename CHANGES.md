@@ -1,4 +1,4 @@
-## git version
+## v0.11
 
 - Completly changed the syntax to make this a proper ppx (and not a -pp as it
   previously was).
