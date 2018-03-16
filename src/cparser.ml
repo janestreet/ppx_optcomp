@@ -2,7 +2,7 @@
    like ones we would get from parsing OCaml file.
 *)
 
-open Ppx_core
+open Ppxlib
 
 module Parsing  = Caml.Parsing
 
@@ -49,7 +49,7 @@ let fetch_directive_argument (lexer : lexer) lexbuf =
         | LBRACKETAT
         | LBRACKETATAT
         | LBRACKETATATAT), _ -> loop acc (RBRACKET :: brackets)
-      | _, closing :: brackets when Polymorphic_compare.(=) token closing ->
+      | _, closing :: brackets when token = closing ->
         loop acc brackets
       | _ -> loop acc brackets
   in

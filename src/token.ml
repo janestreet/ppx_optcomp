@@ -1,4 +1,5 @@
-open Ppx_core
+open Base
+open Ppxlib
 
 module Directive = struct
   type t = If | Else | Elif | Endif | Ifdef | Ifndef |

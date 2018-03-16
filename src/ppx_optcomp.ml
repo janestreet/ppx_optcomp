@@ -1,4 +1,6 @@
-open Ppx_core
+open Base
+open Stdio
+open Ppxlib
 open Ast_builder.Default
 
 module Filename = Caml.Filename
@@ -358,7 +360,7 @@ end = struct
     match our_as with
     | [] -> Some item
     | [({ loc; _}, payload) as our_a] ->
-      Ppx_core.Attribute.mark_as_handled_manually our_a;
+      Attribute.mark_as_handled_manually our_a;
       begin match Interpreter.eval env (get_expr ~loc payload) with
       | Bool b -> if b then Some (replace_attrs item other_as) else None
       | v ->
@@ -452,13 +454,13 @@ let map =
 (* Preserve the enrivonment between invocation using cookies *)
 let state = ref Env.init
 let () =
-  Ppx_driver.Cookies.add_simple_handler "ppx_optcomp.env"
+  Driver.Cookies.add_simple_handler "ppx_optcomp.env"
     Ast_pattern.__
     ~f:(function
       | None   -> state := Env.init
       | Some x -> state := Interpreter.EnvIO.of_expression x);
-  Ppx_driver.Cookies.add_post_handler (fun cookies ->
-    Ppx_driver.Cookies.set cookies "ppx_optcomp.env"
+  Driver.Cookies.add_post_handler (fun cookies ->
+    Driver.Cookies.set cookies "ppx_optcomp.env"
       (Interpreter.EnvIO.to_expression !state))
 ;;
 
@@ -469,7 +471,7 @@ let preprocess ~f x =
 ;;
 
 let () =
-  Ppx_driver.register_transformation "optcomp"
+  Driver.register_transformation "optcomp"
     ~preprocess_impl:(preprocess ~f:map#structure_gen)
     ~preprocess_intf:(preprocess ~f:map#signature_gen)
 ;;

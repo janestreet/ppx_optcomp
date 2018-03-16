@@ -4,6 +4,8 @@
   previously was).
   The old syntax is now available in `ppx_optcomp_old`.
 
+- Depend on ppxlib instead of (now deprecated) ppx\_core and ppx\_driver.
+
 ## 113.43.00
 
 - Make it easier to share a .h and .mlh
