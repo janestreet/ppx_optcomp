@@ -19,7 +19,7 @@ Syntax
 ------
 
 ppx\_optcomp is implemented using ppx_driver and operates on ocaml AST.
-This means that whole file needs to be gramatically correct ocaml.
+This means that whole file needs to be grammatically correct ocaml.
 
 The general syntax is:
 
