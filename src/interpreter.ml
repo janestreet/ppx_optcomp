@@ -257,14 +257,14 @@ let rec eval env e : Value.t =
         List.map args ~f:(fun (l, x) -> match l with Nolabel -> x | _ -> not_supported e)
       in
       match s, args with
-      | "="  , [x; y] -> eval_cmp     env Polymorphic_compare.( = )   x y
-      | "<"  , [x; y] -> eval_cmp     env Polymorphic_compare.( < )   x y
-      | ">"  , [x; y] -> eval_cmp     env Polymorphic_compare.( > )   x y
-      | "<=" , [x; y] -> eval_cmp     env Polymorphic_compare.( <= )  x y
-      | ">=" , [x; y] -> eval_cmp     env Polymorphic_compare.( >= )  x y
-      | "<>" , [x; y] -> eval_cmp     env Polymorphic_compare.( <> )  x y
-      | "min", [x; y] -> eval_poly2   env Polymorphic_compare.min     x y
-      | "max", [x; y] -> eval_poly2   env Polymorphic_compare.max     x y
+      | "="  , [x; y] -> eval_cmp     env Poly.( = )   x y
+      | "<"  , [x; y] -> eval_cmp     env Poly.( < )   x y
+      | ">"  , [x; y] -> eval_cmp     env Poly.( > )   x y
+      | "<=" , [x; y] -> eval_cmp     env Poly.( <= )  x y
+      | ">=" , [x; y] -> eval_cmp     env Poly.( >= )  x y
+      | "<>" , [x; y] -> eval_cmp     env Poly.( <> )  x y
+      | "min", [x; y] -> eval_poly2   env Poly.min     x y
+      | "max", [x; y] -> eval_poly2   env Poly.max     x y
       | "+"  , [x; y] -> eval_int2    env ( + )   x y
       | "-"  , [x; y] -> eval_int2    env ( - )   x y
       | "*"  , [x; y] -> eval_int2    env ( * )   x y
@@ -389,7 +389,7 @@ and do_bind env patt value =
 and eval_same env ex ey =
   let vx = eval env ex and vy = eval env ey in
   let tx = Value.type_ vx and ty = Value.type_ vy in
-  if Polymorphic_compare.equal tx ty then
+  if Poly.equal tx ty then
     (vx, vy)
   else
     invalid_type ey.pexp_loc tx ty
