@@ -1,1 +1,1 @@
-[%% error "nested error" ]
+[%% optcomp.error "nested error" ]

@@ -117,7 +117,7 @@ module Test_nested_error = struct
   [%% import "test_imported/error/a.ml" ]
 end
 [%%expect{|
-Line _, characters 4-9:
+Line _, characters 4-17:
 Error: nested error
 |}]
 

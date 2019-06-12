@@ -24,7 +24,7 @@ module Directive = struct
     | "optcomp.ifndef"   | "ifndef"   -> Some Ifndef
     | "optcomp.define"   | "define"   -> Some Define
     | "optcomp.undef"    | "undef"    -> Some Undef
-    | "optcomp.error"    | "error"    -> Some Error
+    | "optcomp.error"                 -> Some Error
     | "optcomp.warning"  | "warning"  -> Some Warning
     | "optcomp.import"   | "import"   -> Some Import
     | "optcomp.elifdef"  | "elifdef"  -> Some Elifdef
