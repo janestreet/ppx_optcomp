@@ -355,11 +355,11 @@ end = struct
 
   let attr_mapper ~to_loc ~to_attrs ~replace_attrs ~env item =
     let loc = to_loc item in
-    let is_our_attribute ({ txt; _}, _) = Token.Directive.matches txt ~expected:"if" in
+    let is_our_attribute { attr_name = { txt; _}; _ } = Token.Directive.matches txt ~expected:"if" in
     let our_as, other_as = List.partition_tf (to_attrs item) ~f:is_our_attribute in
     match our_as with
     | [] -> Some item
-    | [({ loc; _}, payload) as our_a] ->
+    | [{ attr_name = { loc; _}; attr_payload = payload; attr_loc = _; } as our_a] ->
       Attribute.mark_as_handled_manually our_a;
       begin match Interpreter.eval env (get_expr ~loc payload) with
       | Bool b -> if b then Some (replace_attrs item other_as) else None

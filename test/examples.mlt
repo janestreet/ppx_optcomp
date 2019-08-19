@@ -8,7 +8,7 @@ module Test_simple_if = struct
   let x = "BAD"
   [%% endif]
 
-  let _ = printf "%s" x
+  let () = printf "%s" x
 end
 [%%expect{| OK |}]
 
@@ -24,7 +24,7 @@ module Test_comments = struct
   *)
   [%% endif]
 
-  let _ = printf "%s" x
+  let () = printf "%s" x
 
 end
 [%%expect{| OK |}]
@@ -43,7 +43,7 @@ module Test_nested_if = struct
   [%% endif]
   let y = "OK2"
 
-  let _ = printf "%s %s" x y
+  let () = printf "%s %s" x y
 end
 [%%expect{| OK1 OK2 |}]
 
@@ -66,7 +66,7 @@ module Test_defined = struct
   let y = "OK2"
   [%% endif ]
 
-  let _ = printf "%s %s" x y
+  let () = printf "%s %s" x y
 end
 [%%expect{| OK1 OK2 |}]
 
@@ -133,47 +133,47 @@ module Test_import_config = struct
   let x = "BAD"
   [%% endif]
 
-  let _ = printf "%s" x
+  let () = printf "%s" x
 end
 [%%expect{| OK |}]
 
 module Test_order = struct
   open Core
 
-  let _ = printf "%s" "a"
-  let _ = printf "%s" "b"
+  let () = printf "%s" "a"
+  let () = printf "%s" "b"
 
   [%% if true ]
-   let _ = printf "%s" "c"
-   let _ = printf "%s" "d"
+   let () = printf "%s" "c"
+   let () = printf "%s" "d"
    [%% define ABC]
-   let _ = printf "%s" "e"
-   let _ = printf "%s" "f"
+   let () = printf "%s" "e"
+   let () = printf "%s" "f"
   [%% endif ]
 
   [%% if false ]
   [%% else ]
-   let _ = printf "%s" "g"
-   let _ = printf "%s" "h"
+   let () = printf "%s" "g"
+   let () = printf "%s" "h"
    [%% define ABC]
-   let _ = printf "%s" "i"
-   let _ = printf "%s" "j"
+   let () = printf "%s" "i"
+   let () = printf "%s" "j"
   [%% endif ]
 
   [%% if false ]
   [%% elif true ]
-   let _ = printf "%s" "k"
-   let _ = printf "%s" "l"
+   let () = printf "%s" "k"
+   let () = printf "%s" "l"
    [%% define ABC]
-   let _ = printf "%s" "m"
-   let _ = printf "%s" "n"
+   let () = printf "%s" "m"
+   let () = printf "%s" "n"
   [%% endif ]
 
-  let _ = printf "%s" "o"
-  let _ = printf "%s" "p"
+  let () = printf "%s" "o"
+  let () = printf "%s" "p"
   [%% define ABC]
-  let _ = printf "%s" "q"
-  let _ = printf "%s" "r"
+  let () = printf "%s" "q"
+  let () = printf "%s" "r"
 end
 [%%expect{| abcdefghijklmnopqr |}]
 
@@ -181,7 +181,7 @@ module Test_show = struct
   open Core
 
   [%% if (show (3+3*3)) > 0]
-   let _ = printf "%s" "OK";
+   let () = printf "%s" "OK";
   [%% endif ]
 
   [%% define x "OK"]
@@ -209,7 +209,7 @@ module Test_optional_match = struct
   | OK2 of string * int [@if defined FOO]
   | BAD of int [@if defined BAR]
 
-  let _ = match ((OK2 ("OK", 2)): t) with
+  let () = match ((OK2 ("OK", 2)): t) with
   | OK1 s -> printf "%s" s
   | OK2 (y,z) [@if defined FOO] -> printf "%s %i\n" y z
   | BAD _ [@if defined BAR] -> printf "This will cause error if not dropped %s" undefined_ident
@@ -219,7 +219,7 @@ module Test_optional_match = struct
    | OK2 _ -> "OK"
    | BAD _ [@if defined BAR] -> "BAD"
 
-  let _ = printf "%s" (f (OK1 "abc"))
+  let () = printf "%s" (f (OK1 "abc"))
 end
 [%%expect{|
 OK 2
@@ -281,7 +281,7 @@ module Test_scoping = struct
     module A = struct
       [%%define x "BAD1"]
       [%%ifdef x]
-        let _ = printf "%s" "OK2"
+        let () = printf "%s" "OK2"
       [%%endif]
     end
     [%%define y (show x)]
