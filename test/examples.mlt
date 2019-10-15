@@ -75,7 +75,7 @@ module Test_error_simple = struct
   [%% error "Big ooooooops."]
 end
 [%%expect{|
-Line _, characters 6-11:
+Line _, characters _-_:
 Error: Big ooooooops.
 File "examples.mlt", line 74, characters 6-13::
 Warning Ooops.
@@ -100,7 +100,7 @@ module Test_optional_variant = struct
 
 end
 [%%expect{|
-Line _, characters 14-19:
+Line _, characters _-_:
 Error: This variant expression is expected to have type t
        The constructor BAD_4 does not belong to type t
 |}]
@@ -117,7 +117,7 @@ module Test_nested_error = struct
   [%% import "test_imported/error/a.ml" ]
 end
 [%%expect{|
-Line _, characters 4-17:
+Line _, characters _-_:
 Error: nested error
 |}]
 
