@@ -37,7 +37,19 @@ module Value = struct
       (fun major minor patchlevel -> Tuple [Int major; Int minor; Int patchlevel])
   ;;
 
-  let os_type = String Caml.Sys.os_type
+  let os_type =
+    let os: string = Caml.Sys.os_type in
+    if (*os = "Unix"*) true then
+      String (
+        let ic = Unix.open_process_in "uname" in
+        let uname =
+          match Stdio.In_channel.input_line ic with
+            Some name -> name
+          | None -> "Unix"
+        in let () = Stdio.In_channel.close ic in
+        uname)
+      else
+          String os
   ;;
 
   let rec to_expression loc t =
