@@ -37,6 +37,9 @@ module Value = struct
       (fun major minor patchlevel -> Tuple [Int major; Int minor; Int patchlevel])
   ;;
 
+  let os_type = String Caml.Sys.os_type
+  ;;
+
   let rec to_expression loc t =
     match t with
     | Bool   x   -> ebool   ~loc x
@@ -158,6 +161,10 @@ end = struct
         ; txt = "ocaml_version"
         },
         Value.ocaml_version
+        ; { loc = Location.none
+        ; txt = "os_type"
+        },
+        Value.os_type
       ]
 
   let short_loc_string (loc : Location.t) =
