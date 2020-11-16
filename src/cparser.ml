@@ -87,10 +87,10 @@ let parse_directive (lexer : lexer) lexbuf : ('a Token.t) =
     | None -> PStr []
   in
   match token.txt with
-    | IF                -> Token.make_directive "if" loc payload
-    | ELSE              -> Token.make_directive "else" loc payload
-    | LIDENT s          -> Token.make_directive s loc payload
-    | _ -> Location.raise_errorf ~loc "optcomp: unknown token"
+  | IF                -> Token.make_directive "if" loc payload
+  | ELSE              -> Token.make_directive "else" loc payload
+  | LIDENT s          -> Token.make_directive s loc payload
+  | _ -> Location.raise_errorf ~loc "optcomp: unknown token"
 
 let parse_loop lexbuf =
   let is_beginning_of_line lexbuf =

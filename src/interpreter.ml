@@ -186,11 +186,11 @@ end = struct
     | Some { state = Defined _; _ } -> true
     | Some { state = Undefined; _ } -> false
     | None -> if permissive then false else
-      Location.raise_errorf ~loc:var.loc
-        "optcomp: doesn't know about %s.\n\
-         You need to either define it or undefine it with #undef.\n\
-         Optcomp doesn't accept variables it doesn't know about to avoid typos."
-        var.txt
+        Location.raise_errorf ~loc:var.loc
+          "optcomp: doesn't know about %s.\n\
+           You need to either define it or undefine it with #undef.\n\
+           Optcomp doesn't accept variables it doesn't know about to avoid typos."
+          var.txt
   ;;
 end
 
@@ -257,7 +257,7 @@ let rec eval env e : Value.t =
   | Pexp_tuple l -> Tuple (List.map l ~f:(eval env))
 
   | Pexp_ident id | Pexp_construct (id, None) ->
-      Env.eval env (var_of_lid id)
+    Env.eval env (var_of_lid id)
 
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident s; _ }; _ }, args) -> begin
       let args =
