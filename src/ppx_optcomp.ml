@@ -1,11 +1,10 @@
-open Base
-open Stdio
 open Ppxlib
 open Ast_builder.Default
 
-module Filename = Caml.Filename
+module Filename = Stdlib.Filename
 module Env = Interpreter.Env
 module Value = Interpreter.Value
+module List = Stdlib.ListLabels
 
 
 module Of_item = struct
@@ -116,11 +115,11 @@ end = struct
     let filename = Ast_utils.get_string ~loc payload in
     let fpath, ftype = resolve_import ~loc ~filename in
     let in_ch =
-      try In_channel.create fpath
+      try open_in fpath
       with exn ->
         let msg = match exn with
           | Sys_error msg -> msg
-          | _ -> Exn.to_string exn
+          | _ -> Printexc.to_string exn
         in
         Location.raise_errorf ~loc "optcomp: cannot open imported file: %s: %s" fpath msg
     in
@@ -132,9 +131,9 @@ end = struct
 
  let unroll (stack : 'a Token.t list) : ('a Token.t * 'a Token.t list) =
    let bs, _, rest_rev =
-     List.fold stack ~init:([], false, []) ~f:(fun (bs, found, rest) x ->
+     List.fold_left stack ~init:([], false, []) ~f:(fun (bs, found, rest) x ->
        match x, found with
-       | Block b, false -> b @ bs, false, rest
+       | Token.Block b, false -> b @ bs, false, rest
        | _ -> bs, true, x :: rest
      )
    in
@@ -144,7 +143,7 @@ end = struct
    fun items ~of_item ->
      let of_items_st x = of_items ~of_item:Of_item.structure x in
      let tokens_rev =
-       List.fold items ~init:[] ~f:(fun acc item ->
+       List.fold_left items ~init:[] ~f:(fun acc item ->
          match of_item item with
          | Directive (dir, loc, payload) as token ->
            let last_block, rest = unroll acc in
@@ -158,7 +157,7 @@ end = struct
                  let st_items = Parse.implementation lexbuf in
                  Token.just_directives_exn ~loc (of_items_st st_items)
              in
-             In_channel.close in_ch;
+             close_in in_ch;
              List.rev new_tokens @ (last_block :: rest)
            | _ -> token :: last_block :: rest
            end
@@ -216,7 +215,7 @@ end = struct
 
   let unroll_exn ~loc (acc:'a temp_ast list) : ('a t * 'a partial_if * 'a temp_ast list) =
     (* split by first EmptyIf/PartialIf *)
-    let pre, if_fun, post = List.fold acc ~init:([], None, []) ~f:(
+    let pre, if_fun, post = List.fold_left acc ~init:([], None, []) ~f:(
       fun (pre, found, post) x ->
         match found with
         | Some _ -> pre, found, x::post
@@ -233,7 +232,7 @@ end = struct
 
   let of_tokens (tokens: 'a Token.t list) : ('a t) =
     let pre_parsed =
-      List.fold tokens ~init:([] : 'a temp_ast list) ~f:(fun acc token ->
+      List.fold_left tokens ~init:([] : 'a temp_ast list) ~f:(fun acc token ->
         match token with
         | Token.Block [] -> acc
         | Token.Block b -> Full (Leaf b) :: acc
@@ -332,7 +331,7 @@ end = struct
               [Nolabel, ({ pexp_desc = Pexp_ident { txt = Lident i1; loc }; _ } as expr)]
             ),
             Block (Define ({ txt = i2; _}, None) :: _)
-            when String.(=) i1 i2 ->
+            when String.equal i1 i2 ->
             make_apply_fun ~loc "not_defined_permissive" expr
           | _ -> cond
         in
@@ -346,17 +345,17 @@ end = struct
         end
       | Error { loc; txt } -> Location.raise_errorf ~loc "%s" txt
       | Warning { txt; loc } ->
-        let ppf = Caml.Format.err_formatter in
-        Caml.Format.fprintf ppf "%a:@.Warning %s@." Location.print loc txt;
+        let ppf = Stdlib.Format.err_formatter in
+        Stdlib.Format.fprintf ppf "%a:@.Warning %s@." Location.print loc txt;
         env, []
     in
     let new_env, res = aux_eval ~env ast in
-    (new_env, List.join res)
+    (new_env, List.concat res)
 
   let attr_mapper ~to_loc ~to_attrs ~replace_attrs ~env item =
     let loc = to_loc item in
     let is_our_attribute { attr_name = { txt; _}; _ } = Token.Directive.matches txt ~expected:"if" in
-    let our_as, other_as = List.partition_tf (to_attrs item) ~f:is_our_attribute in
+    let our_as, other_as = List.partition (to_attrs item) ~f:is_our_attribute in
     match our_as with
     | [] -> Some item
     | [{ attr_name = { loc; _}; attr_payload = payload; attr_loc = _; } as our_a] ->

@@ -1,9 +1,10 @@
-open Base
 open Ppxlib
 open Ast_builder.Default
 
-module Filename = Caml.Filename
-module Parsing  = Caml.Parsing
+module Filename = Stdlib.Filename
+module Parsing  = Stdlib.Parsing
+module String = Stdlib.StringLabels
+module List = Stdlib.ListLabels
 
 module Type = struct
   type t =
@@ -33,7 +34,7 @@ module Value = struct
     | Tuple  of t list
 
   let ocaml_version =
-    Caml.Scanf.sscanf Caml.Sys.ocaml_version "%d.%d.%d"
+    Stdlib.Scanf.sscanf Stdlib.Sys.ocaml_version "%d.%d.%d"
       (fun major minor patchlevel -> Tuple [Int major; Int minor; Int patchlevel])
   ;;
 
@@ -80,8 +81,8 @@ module Value = struct
         Buffer.add_char buf '(';
         aux x;
         List.iter l ~f:(fun x ->
-          Buffer.add_string buf ", ";
-          aux x);
+            Buffer.add_string buf ", ";
+            aux x);
         Buffer.add_char buf ')'
     in
     aux v;
@@ -124,32 +125,34 @@ end = struct
     ; state : var_state
     }
 
-  type t = entry Map.M(String).t
+  module String_map = MoreLabels.Map.Make(String)
 
-  let empty = Map.empty (module String)
+  type t = entry String_map.t
+
+  let empty = String_map.empty
 
   let to_expression t =
     pexp_apply ~loc:Location.none (evar ~loc:Location.none "env")
-      (List.map (Map.to_alist t) ~f:(fun (var, { loc; state }) ->
-         (Labelled var,
-          match state with
-          | Defined v -> pexp_construct ~loc { txt = Lident "Defined"; loc }
-                           (Some (Value.to_expression loc v))
-          | Undefined -> pexp_construct ~loc { txt = Lident "Undefined"; loc }
-                           None)))
+      (List.map (String_map.bindings t) ~f:(fun (var, { loc; state }) ->
+           (Labelled var,
+            match state with
+            | Defined v -> pexp_construct ~loc { txt = Lident "Defined"; loc }
+                             (Some (Value.to_expression loc v))
+            | Undefined -> pexp_construct ~loc { txt = Lident "Undefined"; loc }
+                             None)))
 
-  let seen t (var : _ Loc.t) = Map.mem t var.txt
+  let seen t (var : _ Loc.t) = String_map.mem var.txt t
 
   let add t ~(var:_ Loc.t) ~value =
-    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
+    String_map.add t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
   ;;
 
   let undefine t (var : _ Loc.t) =
-    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
+    String_map.add t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
   ;;
 
   let of_list l = List.fold_left l ~init:empty ~f:(fun acc (var, value) ->
-    add acc ~var ~value)
+      add acc ~var ~value)
   ;;
 
   let init =
@@ -165,7 +168,7 @@ end = struct
   ;;
 
   let eval (t : t) (var:string Loc.t) =
-    match Map.find t var.txt with
+    match String_map.find_opt var.txt t with
     | Some { state = Defined v; loc = _  } -> v
     | Some { state = Undefined; loc      } ->
       Location.raise_errorf ~loc:var.loc "optcomp: %s is undefined (undefined at %s)"
@@ -175,15 +178,15 @@ end = struct
   ;;
 
   let is_defined ?(permissive=false) (t : t) (var:string Loc.t) =
-    match Map.find t var.txt with
+    match String_map.find_opt var.txt t with
     | Some { state = Defined _; _ } -> true
     | Some { state = Undefined; _ } -> false
     | None -> if permissive then false else
-      Location.raise_errorf ~loc:var.loc
-        "optcomp: doesn't know about %s.\n\
-         You need to either define it or undefine it with #undef.\n\
-         Optcomp doesn't accept variables it doesn't know about to avoid typos."
-        var.txt
+        Location.raise_errorf ~loc:var.loc
+          "optcomp: doesn't know about %s.\n\
+           You need to either define it or undefine it with #undef.\n\
+           Optcomp doesn't accept variables it doesn't know about to avoid typos."
+          var.txt
   ;;
 end
 
@@ -230,7 +233,7 @@ let not_supported e =
 ;;
 
 let parse_int loc x =
-  match Int.of_string x with
+  match int_of_string x with
   | v -> v
   | exception _ ->
     Location.raise_errorf ~loc "optcomp: invalid integer"
@@ -250,26 +253,26 @@ let rec eval env e : Value.t =
   | Pexp_tuple l -> Tuple (List.map l ~f:(eval env))
 
   | Pexp_ident id | Pexp_construct (id, None) ->
-      Env.eval env (var_of_lid id)
+    Env.eval env (var_of_lid id)
 
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident s; _ }; _ }, args) -> begin
       let args =
         List.map args ~f:(fun (l, x) -> match l with Nolabel -> x | _ -> not_supported e)
       in
       match s, args with
-      | "="  , [x; y] -> eval_cmp     env Poly.( = )   x y
-      | "<"  , [x; y] -> eval_cmp     env Poly.( < )   x y
-      | ">"  , [x; y] -> eval_cmp     env Poly.( > )   x y
-      | "<=" , [x; y] -> eval_cmp     env Poly.( <= )  x y
-      | ">=" , [x; y] -> eval_cmp     env Poly.( >= )  x y
-      | "<>" , [x; y] -> eval_cmp     env Poly.( <> )  x y
-      | "min", [x; y] -> eval_poly2   env Poly.min     x y
-      | "max", [x; y] -> eval_poly2   env Poly.max     x y
+      | "="  , [x; y] -> eval_cmp     env ( = )   x y
+      | "<"  , [x; y] -> eval_cmp     env ( < )   x y
+      | ">"  , [x; y] -> eval_cmp     env ( > )   x y
+      | "<=" , [x; y] -> eval_cmp     env ( <= )  x y
+      | ">=" , [x; y] -> eval_cmp     env ( >= )  x y
+      | "<>" , [x; y] -> eval_cmp     env ( <> )  x y
+      | "min", [x; y] -> eval_poly2   env min     x y
+      | "max", [x; y] -> eval_poly2   env max     x y
       | "+"  , [x; y] -> eval_int2    env ( + )   x y
       | "-"  , [x; y] -> eval_int2    env ( - )   x y
       | "*"  , [x; y] -> eval_int2    env ( * )   x y
       | "/"  , [x; y] -> eval_int2    env ( / )   x y
-      | "mod", [x; y] -> eval_int2    env Caml.( mod ) x y
+      | "mod", [x; y] -> eval_int2    env ( mod ) x y
       | "not", [x]    -> Bool (not (eval_bool env x))
       | "||" , [x; y] -> eval_bool2   env ( || ) x y
       | "&&" , [x; y] -> eval_bool2   env ( && ) x y
@@ -281,14 +284,14 @@ let rec eval env e : Value.t =
       | "to_int", [x] ->
         Int
           (match eval env x with
-           | String x -> convert_from_string loc "int" Int.of_string x
+           | String x -> convert_from_string loc "int" int_of_string x
            | Int    x -> x
-           | Char   x -> Char.to_int x
+           | Char   x -> int_of_char x
            | Bool _ | Tuple _ as x -> cannot_convert loc "int" x)
       | "to_bool", [x] ->
         Bool
           (match eval env x with
-           | String x -> convert_from_string loc "bool" Bool.of_string x
+           | String x -> convert_from_string loc "bool" bool_of_string x
            | Bool   x -> x
            | Int _ | Char _ | Tuple _ as x -> cannot_convert loc "bool" x)
       | "to_char", [x] ->
@@ -301,22 +304,22 @@ let rec eval env e : Value.t =
            | Int x ->
              begin
                match
-                 Char.of_int x
+                 char_of_int x
                with
-               | Some x -> x
-               | None ->
+               | x -> x
+               | exception _ ->
                  Location.raise_errorf ~loc "optcomp: cannot convert %d to char" x
              end
            | Bool _ | Tuple _ as x -> cannot_convert loc "char" x)
       | "show", [x] -> let v = eval env x in
-        let ppf = Caml.Format.err_formatter in
+        let ppf = Stdlib.Format.err_formatter in
         let pprinted = Value.to_string_pretty v in
-        Caml.Format.fprintf ppf "%a:@.SHOW %s@." Location.print loc pprinted;
+        Stdlib.Format.fprintf ppf "%a:@.SHOW %s@." Location.print loc pprinted;
         v
       | "defined", [x] -> Bool (Env.is_defined env (var_of_expr x))
       | "not_defined", [x] -> Bool (not (Env.is_defined env (var_of_expr x)))
       | "not_defined_permissive", [x] -> Bool (not (
-        Env.is_defined ~permissive:true env (var_of_expr x)))
+          Env.is_defined ~permissive:true env (var_of_expr x)))
       | _ -> not_supported e
     end
 
@@ -324,8 +327,8 @@ let rec eval env e : Value.t =
   | Pexp_let (Nonrecursive, vbs, e) ->
     let env =
       List.fold_left vbs ~init:env ~f:(fun new_env vb ->
-        let v = eval env vb.pvb_expr in
-        do_bind new_env vb.pvb_pat v)
+          let v = eval env vb.pvb_expr in
+          do_bind new_env vb.pvb_pat v)
     in
     eval env e
 
@@ -374,7 +377,7 @@ and bind env patt value =
     Env.add (bind env patt value) ~var ~value
 
   | Ppat_tuple x, Tuple y when List.length x = List.length y ->
-    Caml.ListLabels.fold_left2 x y ~init:env ~f:bind
+    List.fold_left2 x y ~init:env ~f:bind
 
   | _ ->
     raise (Pattern_match_failure (patt, value))
@@ -389,7 +392,7 @@ and do_bind env patt value =
 and eval_same env ex ey =
   let vx = eval env ex and vy = eval env ey in
   let tx = Value.type_ vx and ty = Value.type_ vy in
-  if Poly.equal tx ty then
+  if tx = ty then
     (vx, vy)
   else
     invalid_type ey.pexp_loc tx ty
@@ -451,20 +454,20 @@ module EnvIO = struct
       expr.pexp_loc
       expr
       (fun args ->
-         List.fold args ~init:Env.empty ~f:(fun env arg ->
-           match arg with
-           | Labelled var, { pexp_desc = Pexp_construct ({txt=Lident "Defined"; _},
-                                                         Some e)
-                           ; pexp_loc = loc
-                           ; _
-                           } ->
-             Env.add env ~var:{ txt = var; loc } ~value:(eval Env.empty e)
-           | Labelled var, { pexp_desc = Pexp_construct ({txt=Lident "Undefined"; _},
-                                                         None)
-                           ; pexp_loc = loc
-                           ; _
-                           } ->
-             Env.undefine env { txt = var; loc }
-           | _, e ->
-             Location.raise_errorf ~loc:e.pexp_loc "ppx_optcomp: invalid cookie"))
+         List.fold_left args ~init:Env.empty ~f:(fun env arg ->
+             match arg with
+             | Labelled var, { pexp_desc = Pexp_construct ({txt=Lident "Defined"; _},
+                                                           Some e)
+                             ; pexp_loc = loc
+                             ; _
+                             } ->
+               Env.add env ~var:{ txt = var; loc } ~value:(eval Env.empty e)
+             | Labelled var, { pexp_desc = Pexp_construct ({txt=Lident "Undefined"; _},
+                                                           None)
+                             ; pexp_loc = loc
+                             ; _
+                             } ->
+               Env.undefine env { txt = var; loc }
+             | _, e ->
+               Location.raise_errorf ~loc:e.pexp_loc "ppx_optcomp: invalid cookie"))
 end

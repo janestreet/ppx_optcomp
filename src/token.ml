@@ -1,4 +1,3 @@
-open Base
 open Ppxlib
 
 module Directive = struct
@@ -9,8 +8,8 @@ module Directive = struct
            Elifdef | Elifndef
 
   let matches ~expected matched =
-      String.(=) expected matched ||
-      String.(=) ("optcomp." ^ expected) matched
+      String.equal expected matched ||
+      String.equal ("optcomp." ^ expected) matched
 
   (* not using [matches] here because I'm pretty sure the pattern matching
      compiler will make this faster than string equality. *)
@@ -40,7 +39,7 @@ let make_directive name loc payload = match Directive.of_string_opt name with
   | Some dir -> Directive (dir, loc, payload)
   | None -> Location.raise_errorf ~loc "optcomp: unknown directive"
 
-let just_directives_exn ~loc ls = List.filter_map ls ~f:(fun token ->
+let just_directives_exn ~loc ls = ListLabels.filter_map ls ~f:(fun token ->
   match token with
   | Directive _ as dir -> Some dir
   | Block [] -> None
