@@ -3,7 +3,7 @@ open Stdio
 open Ppxlib
 open Ast_builder.Default
 
-module Filename = Caml.Filename
+module Filename = Stdlib.Filename
 module Env = Interpreter.Env
 module Value = Interpreter.Value
 
@@ -346,8 +346,8 @@ end = struct
         end
       | Error { loc; txt } -> Location.raise_errorf ~loc "%s" txt
       | Warning { txt; loc } ->
-        let ppf = Caml.Format.err_formatter in
-        Caml.Format.fprintf ppf "%a:@.Warning %s@." Location.print loc txt;
+        let ppf = Stdlib.Format.err_formatter in
+        Stdlib.Format.fprintf ppf "%a:@.Warning %s@." Location.print loc txt;
         env, []
     in
     let new_env, res = aux_eval ~env ast in

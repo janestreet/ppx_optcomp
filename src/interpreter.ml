@@ -2,8 +2,8 @@ open Base
 open Ppxlib
 open Ast_builder.Default
 
-module Filename = Caml.Filename
-module Parsing  = Caml.Parsing
+module Filename = Stdlib.Filename
+module Parsing  = Stdlib.Parsing
 
 module Type = struct
   type t =
@@ -33,11 +33,11 @@ module Value = struct
     | Tuple  of t list
 
   let ocaml_version =
-    Caml.Scanf.sscanf Caml.Sys.ocaml_version "%d.%d.%d"
+    Stdlib.Scanf.sscanf Stdlib.Sys.ocaml_version "%d.%d.%d"
       (fun major minor patchlevel -> Tuple [Int major; Int minor; Int patchlevel])
   ;;
 
-  let os_type = String Caml.Sys.os_type
+  let os_type = String Stdlib.Sys.os_type
   ;;
 
   let rec to_expression loc t =
@@ -276,7 +276,7 @@ let rec eval env e : Value.t =
       | "-"  , [x; y] -> eval_int2    env ( - )   x y
       | "*"  , [x; y] -> eval_int2    env ( * )   x y
       | "/"  , [x; y] -> eval_int2    env ( / )   x y
-      | "mod", [x; y] -> eval_int2    env Caml.( mod ) x y
+      | "mod", [x; y] -> eval_int2    env Stdlib.( mod ) x y
       | "not", [x]    -> Bool (not (eval_bool env x))
       | "||" , [x; y] -> eval_bool2   env ( || ) x y
       | "&&" , [x; y] -> eval_bool2   env ( && ) x y
@@ -316,9 +316,9 @@ let rec eval env e : Value.t =
              end
            | Bool _ | Tuple _ as x -> cannot_convert loc "char" x)
       | "show", [x] -> let v = eval env x in
-        let ppf = Caml.Format.err_formatter in
+        let ppf = Stdlib.Format.err_formatter in
         let pprinted = Value.to_string_pretty v in
-        Caml.Format.fprintf ppf "%a:@.SHOW %s@." Location.print loc pprinted;
+        Stdlib.Format.fprintf ppf "%a:@.SHOW %s@." Location.print loc pprinted;
         v
       | "defined", [x] -> Bool (Env.is_defined env (var_of_expr x))
       | "not_defined", [x] -> Bool (not (Env.is_defined env (var_of_expr x)))
@@ -381,7 +381,7 @@ and bind env patt value =
     Env.add (bind env patt value) ~var ~value
 
   | Ppat_tuple x, Tuple y when List.length x = List.length y ->
-    Caml.ListLabels.fold_left2 x y ~init:env ~f:bind
+    Stdlib.ListLabels.fold_left2 x y ~init:env ~f:bind
 
   | _ ->
     raise (Pattern_match_failure (patt, value))

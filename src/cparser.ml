@@ -4,7 +4,7 @@
 
 open Ppxlib
 
-module Parsing  = Caml.Parsing
+module Parsing  = Stdlib.Parsing
 
 type lexer = Lexing.lexbuf -> Parser.token
 
