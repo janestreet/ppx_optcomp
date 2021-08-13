@@ -40,6 +40,18 @@ module Value = struct
   let os_type = String Stdlib.Sys.os_type
   ;;
 
+  let config_bool name =
+    Bool
+      (Ocaml_common.Config.config_var name
+       |> Option.map ~f:Bool.of_string
+       |> Option.value ~default:false)
+  ;;
+
+
+  let flambda_backend = config_bool "flambda_backend";;
+
+  let flambda2 = config_bool "flambda2";;
+
   let rec to_expression loc t =
     match t with
     | Bool   x   -> ebool   ~loc x
@@ -165,6 +177,14 @@ end = struct
         ; txt = "os_type"
         },
         Value.os_type
+      ; { loc = Location.none
+        ; txt = "flambda_backend"
+        },
+        Value.flambda_backend
+      ; { loc = Location.none
+        ; txt = "flambda2"
+        },
+        Value.flambda2
       ]
 
   let short_loc_string (loc : Location.t) =
