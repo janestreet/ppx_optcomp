@@ -2,9 +2,14 @@
    like ones we would get from parsing OCaml file.
 *)
 
-open Ppxlib
+module Unshadow = struct
+  module Parser = Parser
+end
 
-module Parsing  = Stdlib.Parsing
+open Ppxlib
+open Unshadow
+
+module Parsing = Stdlib.Parsing
 
 type lexer = Lexing.lexbuf -> Parser.token
 
@@ -69,7 +74,7 @@ let fetch_directive_argument (lexer : lexer) lexbuf =
     in
     let fake_lexbuf = Lexing.from_function (fun _ _ -> assert false) in
     fake_lexbuf.lex_curr_p <- start_pos;
-    match parse Parser.implementation fake_lexer fake_lexbuf with
+    match Parse.Of_ocaml.copy_structure (parse Parser.implementation fake_lexer fake_lexbuf) with
     | []   -> None
     | [st] ->
       assert_no_attributes_in#structure_item st;
