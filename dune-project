@@ -1,1 +1,3 @@
-(lang dune 1.10)
+(lang dune 2.7)
+
+(cram enable)
