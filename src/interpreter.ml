@@ -52,6 +52,12 @@ module Value = struct
 
   let flambda2 = config_bool "flambda2";;
 
+  let host_is_i386 =
+    Bool
+      (Ocaml_common.Config.config_var "architecture"
+       |> Option.map ~f:(fun arch -> String.equal arch "i386")
+       |> Option.value ~default:false)
+
   let rec to_expression loc t =
     match t with
     | Bool   x   -> ebool   ~loc x
@@ -185,6 +191,10 @@ end = struct
         ; txt = "flambda2"
         },
         Value.flambda2
+      ; { loc = Location.none
+        ; txt = "host_is_i386"
+        },
+        Value.host_is_i386
       ]
 
   let short_loc_string (loc : Location.t) =

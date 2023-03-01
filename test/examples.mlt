@@ -102,7 +102,7 @@ end
 [%%expect{|
 Line _, characters _-_:
 Error: This variant expression is expected to have type t
-       The constructor BAD_4 does not belong to type t
+       There is no constructor BAD_4 within type t
 |}]
 
 module Test_import_order = struct
