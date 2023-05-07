@@ -1,0 +1,6 @@
+(executable
+ (name pp_optcomp)
+ (libraries ppx_optcomp ppxlib.runner))
+
+(cram
+ (deps ./pp_optcomp.exe))
