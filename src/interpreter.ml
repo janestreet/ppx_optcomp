@@ -50,6 +50,7 @@ module Value = struct
 
   let flambda_backend = config_bool "flambda_backend";;
 
+  let flambda = config_bool "flambda";;
   let flambda2 = config_bool "flambda2";;
 
   let host_is_i386 =
@@ -187,6 +188,10 @@ end = struct
         ; txt = "flambda_backend"
         },
         Value.flambda_backend
+      ; { loc = Location.none
+        ; txt = "flambda"
+        },
+        Value.flambda
       ; { loc = Location.none
         ; txt = "flambda2"
         },
