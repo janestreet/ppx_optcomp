@@ -1,1 +1,1 @@
-[%% import "b.ml" ]
+[%%import "b.ml"]
