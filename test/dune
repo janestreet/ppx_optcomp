@@ -1,2 +1,4 @@
-(library (name ppx_optcomp_test)
- (preprocess (pps ppx_optcomp ppx_inline_test)))
+(library
+ (name ppx_optcomp_test)
+ (preprocess
+  (pps ppx_optcomp ppx_inline_test)))
