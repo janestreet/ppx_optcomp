@@ -470,7 +470,7 @@ let map =
       in
       super#type_kind env x
 
-    method! expression_desc env x =
+    method! expression env x =
       let f =
         Meta_ast.attr_mapper
           ~env
@@ -480,13 +480,25 @@ let map =
             { c with pc_lhs = { pc_lhs with ppat_attributes = attrs } })
       in
       let x =
-        match x with
-        | Pexp_function cs -> Pexp_function (List.filter_map cs ~f)
-        | Pexp_match (e, cs) -> Pexp_match (super#expression env e, List.filter_map cs ~f)
-        | Pexp_try (e, cs) -> Pexp_try (super#expression env e, List.filter_map cs ~f)
+        match
+          Ppxlib_jane.Shim.Expression_desc.of_parsetree x.pexp_desc ~loc:x.pexp_loc
+        with
+        | Pexp_match (e, cs) ->
+          { x with
+            pexp_desc = Pexp_match (super#expression env e, List.filter_map cs ~f)
+          }
+        | Pexp_try (e, cs) ->
+          { x with pexp_desc = Pexp_try (super#expression env e, List.filter_map cs ~f) }
+        | Pexp_function (params, ty_constraint, Pfunction_cases (cases, loc, attrs)) ->
+          Ppxlib_jane.Ast_builder.Default.Latest.pexp_function
+            params
+            ty_constraint
+            (Pfunction_cases (List.filter_map cases ~f, loc, attrs))
+            ~loc:x.pexp_loc
+            ~attrs:x.pexp_attributes
         | _ -> x
       in
-      super#expression_desc env x
+      super#expression env x
   end
 ;;
 
