@@ -260,14 +260,17 @@ let parse_int loc x =
 
 let rec eval env e : Value.t =
   let loc = e.pexp_loc in
-  match e.pexp_desc with
+  match Ppxlib_jane.Shim.Expression_desc.of_parsetree e.pexp_desc ~loc with
   | Pexp_constant (Pconst_integer (x, None)) -> Int (parse_int loc x)
   | Pexp_constant (Pconst_char x) -> Char x
   | Pexp_constant (Pconst_string (x, _, _)) -> String x
   | Pexp_construct ({ txt = Lident "true"; _ }, None) -> Bool true
   | Pexp_construct ({ txt = Lident "false"; _ }, None) -> Bool false
   | Pexp_construct ({ txt = Lident "()"; _ }, None) -> Tuple []
-  | Pexp_tuple l -> Tuple (List.map l ~f:(eval env))
+  | Pexp_tuple labeled_exprs ->
+    (match Ppxlib_jane.as_unlabeled_tuple labeled_exprs with
+     | Some exprs -> Tuple (List.map exprs ~f:(eval env))
+     | None -> Location.raise_errorf ~loc "optcomp: labeled tuples not supported")
   | Pexp_ident id | Pexp_construct (id, None) -> Env.eval env (var_of_lid id)
   | Pexp_apply ({ pexp_desc = Pexp_ident { txt = Lident s; _ }; _ }, args) ->
     let args =
@@ -371,7 +374,7 @@ let rec eval env e : Value.t =
 
 and bind env patt value =
   let loc = patt.ppat_loc in
-  match patt.ppat_desc, value with
+  match Ppxlib_jane.Shim.Pattern_desc.of_parsetree patt.ppat_desc, value with
   | Ppat_any, _ -> env
   | Ppat_constant (Pconst_integer (x, None)), Int y when parse_int loc x = y -> env
   | Ppat_constant (Pconst_char x), Char y when Char.equal x y -> env
@@ -382,8 +385,10 @@ and bind env patt value =
   | Ppat_var var, _ -> Env.add env ~var ~value
   | Ppat_construct (id, None), _ -> Env.add env ~var:(var_of_lid id) ~value
   | Ppat_alias (patt, var), _ -> Env.add (bind env patt value) ~var ~value
-  | Ppat_tuple x, Tuple y when List.length x = List.length y ->
-    Stdlib.ListLabels.fold_left2 x y ~init:env ~f:bind
+  | Ppat_tuple (labeled_x, Closed), Tuple y when List.length labeled_x = List.length y ->
+    (match Ppxlib_jane.as_unlabeled_tuple labeled_x with
+     | Some x -> Stdlib.ListLabels.fold_left2 x y ~init:env ~f:bind
+     | None -> raise (Pattern_match_failure (patt, value)))
   | _ -> raise (Pattern_match_failure (patt, value))
 
 and do_bind env patt value =
