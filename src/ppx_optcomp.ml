@@ -420,13 +420,20 @@ let map =
         ~eval_item:self#structure_item
         ~of_item:Of_item.structure
 
-    method signature_gen env x =
+    method signature_items_gen env x =
       rewrite
         x
         ~env
         ~drop_item:Attribute.explicitly_drop#signature_item
         ~eval_item:self#signature_item
         ~of_item:Of_item.signature
+
+    method signature_gen env x =
+      let open Ppxlib_jane.Shim.Signature in
+      let { psg_items } = of_parsetree x in
+      let a, psg_items = self#signature_items_gen env psg_items in
+      let x = to_parsetree { psg_items } in
+      a, x
 
     method! structure env x = snd (self#structure_gen env x)
     method! signature env x = snd (self#signature_gen env x)
