@@ -430,9 +430,9 @@ let map =
 
     method signature_gen env x =
       let open Ppxlib_jane.Shim.Signature in
-      let { psg_items } = of_parsetree x in
+      let ({ psg_items; _ } as sg) = of_parsetree x in
       let a, psg_items = self#signature_items_gen env psg_items in
-      let x = to_parsetree { psg_items } in
+      let x = to_parsetree { sg with psg_items } in
       a, x
 
     method! structure env x = snd (self#structure_gen env x)
