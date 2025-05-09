@@ -16,7 +16,7 @@ depends: [
   "stdio"
   "dune"                {>= "3.17.0"}
   "ocaml-compiler-libs" {>= "v0.11.0"}
-  "ppxlib"              {>= "0.33.0"}
+  "ppxlib"              {>= "0.33.0" & < "0.36.0"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "Optional compilation for OCaml"
