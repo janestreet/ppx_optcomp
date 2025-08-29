@@ -342,7 +342,7 @@ let rec eval env e : Value.t =
        Bool (not (Env.is_defined ~permissive:true env (var_of_expr x)))
      | _ -> not_supported e)
   (* Let-binding *)
-  | Pexp_let (Nonrecursive, vbs, e) ->
+  | Pexp_let (Immutable, Nonrecursive, vbs, e) ->
     let env =
       List.fold_left vbs ~init:env ~f:(fun new_env vb ->
         let v = eval env vb.pvb_expr in
