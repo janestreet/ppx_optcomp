@@ -49,12 +49,16 @@ module Value = struct
   let flambda = config_bool "flambda"
   let flambda2 = config_bool "flambda2"
 
-  let host_is_i386 =
+  let check_arch value =
     Bool
       (Ocaml_common.Config.config_var "architecture"
-       |> Option.map ~f:(fun arch -> String.equal arch "i386")
+       |> Option.map ~f:(fun arch -> String.equal arch value)
        |> Option.value ~default:false)
   ;;
+
+  let host_is_i386 = check_arch "i386"
+  let host_is_amd64 = check_arch "amd64"
+  let host_is_arm64 = check_arch "arm64"
 
   let rec to_expression loc t =
     match t with
@@ -175,6 +179,8 @@ end = struct
       ; { loc = Location.none; txt = "flambda" }, Value.flambda
       ; { loc = Location.none; txt = "flambda2" }, Value.flambda2
       ; { loc = Location.none; txt = "host_is_i386" }, Value.host_is_i386
+      ; { loc = Location.none; txt = "host_is_amd64" }, Value.host_is_amd64
+      ; { loc = Location.none; txt = "host_is_arm64" }, Value.host_is_arm64
       ]
   ;;
 
