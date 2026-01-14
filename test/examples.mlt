@@ -365,12 +365,28 @@ File "examples.mlt", line 354, characters 16-34::
 SHOW ("in B", "top")
 |}]
 
+module Test_arch = struct
+  [%% if host_is_amd64 ]
+  let amd64 = true
+  [%%else ]
+  let amd64 = false
+  [%%endif ]
+
+  [%% if host_is_arm64 ]
+  let arm64 = true
+  [%%else ]
+  let arm64 = false
+  [%%endif ]
+
+  let () = assert (amd64 <> arm64)
+end
+
 (* Test env is preserved in toplevel *)
 [%%define x "test_toplevel"]
 [%%define y x]
 [%%define y (show y)]
 
 [%%expect{|
-File "examples.mlt", line 371, characters 12-20::
+File "examples.mlt", line 387, characters 12-20::
 SHOW "test_toplevel"
 |}]
