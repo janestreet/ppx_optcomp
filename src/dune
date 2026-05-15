@@ -1,7 +1,7 @@
 (library
  (name ppx_optcomp)
  (public_name ppx_optcomp)
- (libraries compiler-libs.common base ocaml-compiler-libs.common ppxlib
-   ppxlib_jane stdio)
- (kind ppx_deriver)
+ (libraries compiler-libs.common ocaml-compiler-libs.common ppxlib
+   ppxlib_jane ppxlib.stdppx)
+ (kind ppx_rewriter)
  (preprocess no_preprocessing))

@@ -1,5 +1,5 @@
-(* Parser for directives in C-like syntax, rewriting them into extensions,
-   like ones we would get from parsing OCaml file.
+(* Parser for directives in C-like syntax, rewriting them into extensions, like ones we
+   would get from parsing OCaml file.
 *)
 
 module Unshadow = struct
@@ -12,9 +12,11 @@ module Parsing = Stdlib.Parsing
 
 type lexer = Lexing.lexbuf -> Parser.token
 
-(* +---------------------------------------------------------------+
+(* {v
+   +---------------------------------------------------------------+
    | Parsing of directives                                         |
-   +---------------------------------------------------------------+ *)
+   +---------------------------------------------------------------+
+   v} *)
 
 let located x lexbuf = { Location.txt = x; loc = Location.of_lexbuf lexbuf }
 
