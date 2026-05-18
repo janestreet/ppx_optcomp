@@ -1,0 +1,4 @@
+(library
+ (name ppx_optcomp_test_cookie)
+ (preprocess
+  (pps ppx_expect ppx_optcomp "-cookie=ppx_optcomp.env=env ~abc:(Defined 1)")))

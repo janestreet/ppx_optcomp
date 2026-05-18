@@ -1,4 +1,4 @@
-open Base
+open Stdppx
 open Ppxlib
 
 module Directive = struct
@@ -22,8 +22,8 @@ module Directive = struct
     String.( = ) expected matched || String.( = ) ("optcomp." ^ expected) matched
   ;;
 
-  (* not using [matches] here because I'm pretty sure the pattern matching
-     compiler will make this faster than string equality. *)
+  (* not using [matches] here because I'm pretty sure the pattern matching compiler will
+     make this faster than string equality. *)
   let of_string_opt s =
     match s with
     | "optcomp.if" | "if" -> Some If

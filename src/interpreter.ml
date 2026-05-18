@@ -1,8 +1,6 @@
-open Base
+open Stdppx
 open Ppxlib
 open Ast_builder.Default
-module Filename = Stdlib.Filename
-module Parsing = Stdlib.Parsing
 
 module Type = struct
   type t =
@@ -41,7 +39,7 @@ module Value = struct
   let config_bool name =
     Bool
       (Ocaml_common.Config.config_var name
-       |> Option.map ~f:Bool.of_string
+       |> Option.map ~f:bool_of_string
        |> Option.value ~default:false)
   ;;
 
@@ -138,15 +136,15 @@ end = struct
     ; state : var_state
     }
 
-  type t = entry Map.M(String).t
+  type t = entry String.Map.t
 
-  let empty = Map.empty (module String)
+  let empty = String.Map.empty
 
   let to_expression t =
     pexp_apply
       ~loc:Location.none
       (evar ~loc:Location.none "env")
-      (List.map (Map.to_alist t) ~f:(fun (var, { loc; state }) ->
+      (List.map (String.Map.bindings t) ~f:(fun (var, { loc; state }) ->
          ( Labelled var
          , match state with
            | Defined v ->
@@ -157,14 +155,14 @@ end = struct
            | Undefined -> pexp_construct ~loc { txt = Lident "Undefined"; loc } None )))
   ;;
 
-  let seen t (var : _ Loc.t) = Map.mem t var.txt
+  let seen t (var : _ Loc.t) = String.Map.mem var.txt t
 
   let add t ~(var : _ Loc.t) ~value =
-    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Defined value }
+    String.Map.add var.txt { loc = var.loc; state = Defined value } t
   ;;
 
   let undefine t (var : _ Loc.t) =
-    Map.set t ~key:var.txt ~data:{ loc = var.loc; state = Undefined }
+    String.Map.add var.txt { loc = var.loc; state = Undefined } t
   ;;
 
   let of_list l =
@@ -189,7 +187,7 @@ end = struct
   ;;
 
   let eval (t : t) (var : string Loc.t) =
-    match Map.find t var.txt with
+    match String.Map.find_opt var.txt t with
     | Some { state = Defined v; loc = _ } -> v
     | Some { state = Undefined; loc } ->
       Location.raise_errorf
@@ -201,7 +199,7 @@ end = struct
   ;;
 
   let is_defined ?(permissive = false) (t : t) (var : string Loc.t) =
-    match Map.find t var.txt with
+    match String.Map.find_opt var.txt t with
     | Some { state = Defined _; _ } -> true
     | Some { state = Undefined; _ } -> false
     | None ->
@@ -217,9 +215,11 @@ end = struct
   ;;
 end
 
-(* +-----------------------------------------------------------------+
+(* {v
+   +-----------------------------------------------------------------+
    | Expression evaluation                                           |
-   +-----------------------------------------------------------------+ *)
+   +-----------------------------------------------------------------+
+   v} *)
 
 let invalid_type loc expected real =
   Location.raise_errorf
@@ -259,7 +259,7 @@ let not_supported e =
 ;;
 
 let parse_int loc x =
-  match Int.of_string x with
+  match int_of_string x with
   | v -> v
   | exception _ -> Location.raise_errorf ~loc "optcomp: invalid integer"
 ;;
@@ -309,14 +309,14 @@ let rec eval env e : Value.t =
      | "to_int", [ x ] ->
        Int
          (match eval env x with
-          | String x -> convert_from_string loc "int" Int.of_string x
+          | String x -> convert_from_string loc "int" int_of_string x
           | Int x -> x
-          | Char x -> Char.to_int x
+          | Char x -> Char.code x
           | (Bool _ | Tuple _) as x -> cannot_convert loc "int" x)
      | "to_bool", [ x ] ->
        Bool
          (match eval env x with
-          | String x -> convert_from_string loc "bool" Bool.of_string x
+          | String x -> convert_from_string loc "bool" bool_of_string x
           | Bool x -> x
           | (Int _ | Char _ | Tuple _) as x -> cannot_convert loc "bool" x)
      | "to_char", [ x ] ->
@@ -332,9 +332,10 @@ let rec eval env e : Value.t =
               x
           | Char x -> x
           | Int x ->
-            (match Char.of_int x with
-             | Some x -> x
-             | None -> Location.raise_errorf ~loc "optcomp: cannot convert %d to char" x)
+            (match Char.chr x with
+             | x -> x
+             | exception Invalid_argument _ ->
+               Location.raise_errorf ~loc "optcomp: cannot convert %d to char" x)
           | (Bool _ | Tuple _) as x -> cannot_convert loc "char" x)
      | "show", [ x ] ->
        let v = eval env x in
@@ -456,9 +457,11 @@ and eval_poly2 env f a b =
   f a b
 ;;
 
-(* +-----------------------------------------------------------------+
+(* {v
+   +-----------------------------------------------------------------+
    | Environment serialization                                       |
-   +-----------------------------------------------------------------+ *)
+   +-----------------------------------------------------------------+
+   v} *)
 
 module EnvIO = struct
   let to_expression = Env.to_expression
@@ -469,7 +472,7 @@ module EnvIO = struct
       expr.pexp_loc
       expr
       (fun args ->
-        List.fold args ~init:Env.empty ~f:(fun env arg ->
+        List.fold_left args ~init:Env.empty ~f:(fun env arg ->
           match arg with
           | ( Labelled var
             , { pexp_desc = Pexp_construct ({ txt = Lident "Defined"; _ }, Some e)

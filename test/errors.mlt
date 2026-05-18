@@ -1,52 +1,65 @@
 module Test_double_else = struct
+  [%%if true]
 
-  [%% if true ]
   let x = 1
-  [%% else ]
-  let x = 2
-  [%% else ]
-  let x = 3
-  [%% endif]
 
+  [%%else]
+
+  let x = 2
+
+  [%%else]
+
+  let x = 3
+
+  [%%endif]
 end
-[%%expect{|
+
+[%%expect
+  {|
 Line _, characters _-_:
 Error: optcomp: second else clause.
 |}]
 
 module Test_else_elif = struct
+  [%%if true]
 
-  [%% if true ]
   let x = 1
-  [%% else ]
-  let x = 2
-  [%% elif false ]
-  let x = 3
-  [%% endif]
 
+  [%%else]
+
+  let x = 2
+
+  [%%elif false]
+
+  let x = 3
+
+  [%%endif]
 end
-[%%expect{|
+
+[%%expect
+  {|
 Line _, characters _-_:
 Error: optcomp: elif after else clause.
 |}]
 
 module Test_unterminated_if = struct
+  [%%if true]
 
-  [%% if true ]
   let x = a
-
 end
-[%%expect{|
+
+[%%expect
+  {|
 Line _, characters _-_:
 Error: optcomp: unterminated if
 |}]
 
 module Test_import_nonexistent = struct
-
-  [%% import "non_existent_file.h"]
-
+  [%%import "non_existent_file.h"]
 end
-[%%expect{|
+
+[%%expect
+  {|
 Line _, characters _-_:
 Error: optcomp: cannot open imported file: ./non_existent_file.h: ./non_existent_file.h: No such file or directory
 |}]

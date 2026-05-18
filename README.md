@@ -1,6 +1,7 @@
 ppx_optcomp - Optional compilation for OCaml
 ============================================
 
+
 ppx\_optcomp stands for Optional Compilation. It is a tool used to
 handle optional compilations of pieces of code depending of the word
 size, the version of the compiler, ...
@@ -71,6 +72,29 @@ module A = struct
 end
 (* [x] is bound to [0] *)
 ```
+
+Variables may also be defined from outside the source file by passing the
+`ppx_optcomp.env` cookie to the ppx driver. For example:
+
+```
+$ ./pp.exe -cookie 'ppx_optcomp.env=env ~abc:(Defined 1)' -impl foo.ml
+```
+
+makes `abc` available to `[%%if defined abc]` and similar directives in `foo.ml`. The
+value of the cookie has the form `env ~var:(Defined expression) ...`, with one
+labeled argument per variable to define.
+
+If you are using `dune`, the same mechanism can be used by passing the flag through to the
+ppx driver after `--`:
+
+```
+(executable
+ (name vtest)
+ (preprocess
+  (pps ppx_optcomp -- -cookie "ppx_optcomp.env=env ~abc:(Defined 1)")))
+```
+
+
 
 ### Conditionals
 
